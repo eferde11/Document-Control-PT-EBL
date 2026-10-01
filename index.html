@@ -41,7 +41,33 @@
 </head>
 <body class="bg-slate-50 font-sans text-slate-800" x-data="documentControlApp()">
 
-    <div class="flex flex-col md:flex-row h-screen overflow-hidden">
+    <!-- Layar Login -->
+    <div x-show="!user" x-cloak class="fixed inset-0 z-[60] side flex items-center justify-center p-4">
+        <div class="modal-card bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div class="p-6 bg-slate-900 text-white border-b-2 border-ochre-500 flex items-center gap-3">
+                <div class="p-2 bg-ochre-500 rounded-md text-slate-950"><i data-lucide="shield-check" class="w-6 h-6"></i></div>
+                <div>
+                    <h1 class="font-display text-base font-bold leading-snug">Document Control</h1>
+                    <p class="text-[11px] text-ochre-400">PT Energi Batubara Lestari</p>
+                </div>
+            </div>
+            <form @submit.prevent="login" class="p-6 space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Username</label>
+                    <input type="text" x-model="loginForm.username" autocomplete="username" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Kata sandi</label>
+                    <input type="password" x-model="loginForm.password" autocomplete="current-password" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <p x-show="loginError" x-text="loginError" class="text-rose-600 font-medium"></p>
+                <button type="submit" :disabled="loginBusy" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-md font-semibold">Masuk</button>
+                <p class="text-[11px] text-slate-400 text-center">Belum punya akun? Hubungi Document Controller.</p>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="user" x-cloak class="flex flex-col md:flex-row h-screen overflow-hidden">
         
         <!-- Sidebar Navigation -->
         <aside class="side w-full md:w-72 shrink-0 max-h-[34vh] md:max-h-none overflow-y-auto md:overflow-visible text-white flex flex-col justify-between">
@@ -59,7 +85,14 @@
 
                 <!-- Navigation Folder Items -->
                 <nav class="mt-3 px-3 space-y-1 overflow-y-auto max-h-[calc(100vh-150px)] text-xs custom-scrollbar">
-                    <div class="px-3 py-2 text-[10px] font-bold text-slate-400 tracking-normal">Folder dokumen ISO</div>
+                    <button @click="activeModule = 0; selectedFilterIso = ''; selectedFilterReview = ''"
+                            :class="activeModule === 0 ? 'nav-active' : 'nav-idle'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors font-medium">
+                        <i data-lucide="layers" class="w-4 h-4 shrink-0"></i>
+                        <span class="truncate leading-tight flex-1">SEMUA DOKUMEN</span>
+                        <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/10" x-text="documents.length"></span>
+                    </button>
+                    <div class="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 tracking-normal">Folder dokumen ISO</div>
                     
                     <template x-for="module in modules" :key="module.id">
                         <button 
@@ -81,13 +114,18 @@
                         EBL
                     </div>
                     <div class="truncate">
-                        <p class="text-xs font-semibold text-white">Document Controller</p>
-                        <p class="text-[10px] text-slate-400">PT Energi Batubara Lestari</p>
+                        <p class="text-xs font-semibold text-white truncate" x-text="user ? user.name : ''"></p>
+                        <p class="text-[10px] text-slate-400" x-text="isAdmin ? 'Document Controller · akses penuh' : 'Viewer · lihat saja'"></p>
                     </div>
                 </div>
-                <button @click="showInfoModal = true" class="text-slate-400 hover:text-white" title="Tentang Sistem">
-                    <i data-lucide="info" class="w-4 h-4"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button @click="showInfoModal = true" class="text-slate-400 hover:text-white" title="Tentang Sistem">
+                        <i data-lucide="info" class="w-4 h-4"></i>
+                    </button>
+                    <button @click="logout()" class="text-slate-400 hover:text-white" title="Keluar">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
             </div>
         </aside>
 
@@ -103,7 +141,8 @@
                     <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">Sistem Manajemen Terintegrasi PT Energi Batubara Lestari (ISO 9001, 14001, 45001)</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button @click="showUploadModal = true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
+                    <span x-show="!isAdmin" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Mode lihat saja</span>
+                    <button x-show="isAdmin" @click="showUploadModal = true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
                         <i data-lucide="upload-cloud" class="w-4 h-4"></i> Unggah Dokumen Baru
                     </button>
                 </div>
@@ -185,6 +224,7 @@
                                         <td class="p-4 font-mono font-semibold text-slate-700 whitespace-nowrap" x-text="doc.code"></td>
                                         <td class="p-4">
                                             <p class="font-semibold text-slate-900 leading-snug max-w-md" x-text="doc.title"></p>
+                                            <p x-show="activeModule === 0" class="text-[11px] font-semibold text-emerald-700 mt-0.5" x-text="folderName(doc.moduleId)"></p>
                                             <p class="text-[11px] text-slate-500 mt-0.5" x-text="'Diupload oleh: ' + doc.author + ' | Tanggal: ' + doc.date"></p>
                                             <p x-show="doc.fileName" class="text-[11px] text-emerald-700 font-medium mt-1 flex items-center gap-1">
                                                 <i data-lucide="paperclip" class="w-3 h-3"></i><span x-text="doc.fileName + ' (' + doc.fileSize + ')'"></span>
@@ -231,16 +271,16 @@
                                         </td>
                                         <td class="p-4 text-center whitespace-nowrap">
                                             <div class="flex items-center justify-center gap-1">
-                                                <button @click="openReview(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition" title="Review Dokumen">
+                                                <button x-show="isAdmin" @click="openReview(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition" title="Review Dokumen">
                                                     <i data-lucide="clipboard-check" class="w-4 h-4"></i> Review
                                                 </button>
-                                                <button @click="downloadDocument(doc)" :class="doc.fileName ? 'text-emerald-700 hover:bg-emerald-100' : 'text-slate-300 hover:bg-slate-100'" class="p-1.5 rounded-lg transition" :title="doc.fileName ? 'Unduh ' + doc.fileName : 'Belum ada file terlampir'">
+                                                <button x-show="canDownload" @click="downloadDocument(doc)" :class="doc.fileName ? 'text-emerald-700 hover:bg-emerald-100' : 'text-slate-300 hover:bg-slate-100'" class="p-1.5 rounded-lg transition" :title="doc.fileName ? 'Unduh ' + doc.fileName : 'Belum ada file terlampir'">
                                                     <i data-lucide="download" class="w-4 h-4"></i>
                                                 </button>
-                                                <button @click="viewDetail(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Lihat Detail">
+                                                <button @click="viewDetail(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Lihat dokumen">
                                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                                 </button>
-                                                <button @click="deleteDoc(doc.id)" class="p-1.5 hover:bg-rose-100 rounded-lg text-rose-600 transition" title="Hapus Dokumen">
+                                                <button x-show="isAdmin" @click="deleteDoc(doc.id)" class="p-1.5 hover:bg-rose-100 rounded-lg text-rose-600 transition" title="Hapus Dokumen">
                                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                                 </button>
                                             </div>
@@ -256,7 +296,7 @@
                                                 <i data-lucide="folder-open" class="w-6 h-6"></i>
                                             </div>
                                             <p class="text-sm font-medium text-slate-600">Tidak ada dokumen ditemukan pada modul ini.</p>
-                                            <p class="text-xs text-slate-400">Silakan gunakan tombol "Unggah Dokumen Baru" untuk menambahkan arsip PT Energi Batubara Lestari.</p>
+                                            <p x-show="isAdmin" class="text-xs text-slate-400">Silakan gunakan tombol "Unggah Dokumen Baru" untuk menambahkan arsip PT Energi Batubara Lestari.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -377,6 +417,41 @@
         </div>
     </div>
 
+    <!-- Modal Lihat Dokumen -->
+    <div x-show="showDetailModal" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="modal-card bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto border">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500 sticky top-0">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i data-lucide="file-search" class="w-4 h-4 text-emerald-400"></i> Detail Dokumen</h3>
+                <button @click="closeDetail()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <template x-if="detailDoc">
+                <div class="p-6 space-y-4 text-xs">
+                    <div>
+                        <p class="font-mono font-semibold text-slate-500" x-text="detailDoc.code + ' · ' + detailDoc.version"></p>
+                        <h4 class="font-display text-lg font-bold text-slate-900 leading-snug mt-1" x-text="detailDoc.title"></h4>
+                    </div>
+                    <dl class="grid grid-cols-2 gap-x-6 gap-y-3">
+                        <div><dt class="text-slate-500">Folder</dt><dd class="font-semibold text-slate-800" x-text="folderName(detailDoc.moduleId)"></dd></div>
+                        <div><dt class="text-slate-500">Standar ISO</dt><dd class="font-semibold text-slate-800" x-text="'ISO ' + detailDoc.iso.join(', ')"></dd></div>
+                        <div><dt class="text-slate-500">Status dokumen</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.status"></dd></div>
+                        <div><dt class="text-slate-500">Hasil review</dt><dd class="font-semibold text-slate-800" x-text="(detailDoc.reviewStatus || 'Belum Direview') + (detailDoc.reviewDate ? ' (' + detailDoc.reviewDate + ', ' + detailDoc.reviewer + ')' : '')"></dd></div>
+                        <div><dt class="text-slate-500">Diupload oleh</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.author + ', ' + detailDoc.date"></dd></div>
+                        <div><dt class="text-slate-500">File</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.fileName ? detailDoc.fileName + ' (' + detailDoc.fileSize + ')' : 'Belum ada file'"></dd></div>
+                    </dl>
+                    <p x-show="detailDoc.reviewNote" class="p-3 bg-slate-50 border rounded-lg text-slate-600" x-text="'Catatan review: ' + detailDoc.reviewNote"></p>
+                    <div x-show="detailIsPdf" class="border rounded-lg overflow-hidden">
+                        <iframe :src="detailUrl ? (canDownload ? detailUrl : detailUrl + '#toolbar=0&navpanes=0') : ''" class="w-full h-[55vh]" title="Pratinjau dokumen"></iframe>
+                    </div>
+                    <p x-show="!detailIsPdf" class="p-4 bg-slate-50 border border-dashed rounded-lg text-slate-500 text-center" x-text="detailDoc.fileName ? 'Pratinjau hanya tersedia untuk file PDF. File Word/Excel dapat dibuka setelah diunduh.' : 'Dokumen ini belum memiliki file terlampir.'"></p>
+                    <div class="pt-4 border-t flex justify-end gap-2">
+                        <button x-show="canDownload && detailDoc.fileName" @click="downloadDocument(detailDoc)" class="px-4 py-2 border rounded-lg text-emerald-700 hover:bg-emerald-50 font-semibold flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
+                        <button @click="closeDetail()" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-semibold">Tutup</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
     <!-- Modal Informasi Sistem -->
     <div x-show="showInfoModal" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
         <div class="bg-white modal-card rounded-xl shadow-2xl max-w-md w-full overflow-hidden border">
@@ -405,12 +480,29 @@
 
     <!-- Script Application Logic -->
     <script>
+        // Akun dasar (kata sandi disimpan sebagai hash SHA-256, bukan teks biasa).
+        // Ganti hash di bawah untuk mengubah kata sandi. Ini hanya penghalang tampilan, bukan keamanan server.
+        const USERS = [
+            { username: 'docoebl', name: 'Document Controller EBL', role: 'admin', hash: '32e00183831ffb9cc1a9089e3ad39da85bf9e7b137b858815c041236d9f1bc12' },
+            { username: 'viewer', name: 'Pengguna Viewer', role: 'viewer', hash: 'eda31808358da195a17ae8a8cb627dac0ffb2c820a70dcfc4e142087096343e4' }
+        ];
+        const VIEWER_CAN_DOWNLOAD = false; // false = viewer hanya melihat, tanpa unduh
+        const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ebl:' + t)))].map(x => x.toString(16).padStart(2, '0')).join('');
+
         const fileStore = new Map(); // id dokumen -> File (disimpan di memori browser)
         const formatSize = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('documentControlApp', () => ({
-                activeModule: 1,
+                activeModule: 0,
+                user: null,
+                loginForm: { username: '', password: '' },
+                loginError: '',
+                loginBusy: false,
+                showDetailModal: false,
+                detailDoc: null,
+                detailUrl: '',
+                detailIsPdf: false,
                 searchQuery: '',
                 selectedFilterIso: '',
                 showUploadModal: false,
@@ -460,7 +552,7 @@
 
                 get filteredDocs() {
                     return this.documents.filter(doc => {
-                        let matchModule = doc.moduleId === this.activeModule;
+                        let matchModule = this.activeModule === 0 || doc.moduleId === this.activeModule;
                         let matchIso = this.selectedFilterIso === '' || doc.iso.includes(this.selectedFilterIso);
                         let matchSearch = this.searchQuery === '' || 
                             doc.code.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
@@ -470,6 +562,34 @@
                     });
                 },
 
+                get isAdmin() { return !!this.user && this.user.role === 'admin'; },
+                get canDownload() { return this.isAdmin || VIEWER_CAN_DOWNLOAD; },
+
+                async login() {
+                    this.loginBusy = true;
+                    this.loginError = '';
+                    try {
+                        const hash = await sha256(this.loginForm.password);
+                        const u = USERS.find(x => x.username === this.loginForm.username.trim().toLowerCase() && x.hash === hash);
+                        if (!u) { this.loginError = 'Username atau kata sandi salah.'; return; }
+                        this.user = { username: u.username, name: u.name, role: u.role };
+                        try { sessionStorage.setItem('ebl_user', u.username); } catch (e) {}
+                        this.loginForm = { username: '', password: '' };
+                        this.activeModule = 0;
+                    } catch (e) {
+                        this.loginError = 'Login membutuhkan koneksi aman (https).';
+                    } finally { this.loginBusy = false; }
+                },
+
+                logout() {
+                    this.user = null;
+                    this.showUploadModal = this.showReviewModal = this.showInfoModal = false;
+                    this.closeDetail();
+                    try { sessionStorage.removeItem('ebl_user'); } catch (e) {}
+                },
+
+                folderName(id) { const m = this.modules.find(x => x.id === id); return m ? m.name : ''; },
+
                 get reviewStats() {
                     const d = this.filteredDocs;
                     const update = d.filter(x => x.reviewStatus === 'Perlu Update').length;
@@ -478,11 +598,11 @@
                 },
 
                 getCurrentModule() {
-                    return this.modules.find(m => m.id === this.activeModule) || {};
+                    return this.activeModule === 0 ? { id: 0, name: 'Semua Dokumen' } : (this.modules.find(m => m.id === this.activeModule) || {});
                 },
 
                 submitNewDocument() {
-                    if(!this.newDoc.code || !this.newDoc.title) return;
+                    if(!this.isAdmin || !this.newDoc.code || !this.newDoc.title) return;
                     const file = this.$refs.fileInput.files[0] || null;
                     const id = Date.now();
                     this.documents.unshift({
@@ -507,6 +627,7 @@
                 },
 
                 openReview(doc) {
+                    if(!this.isAdmin) return;
                     this.reviewDoc = doc;
                     this.reviewForm = { result: doc.reviewStatus || '', reviewer: doc.reviewer || '', note: doc.reviewNote || '' };
                     this.showReviewModal = true;
@@ -514,7 +635,7 @@
                 },
 
                 submitReview() {
-                    if(!this.reviewDoc || !this.reviewForm.result) return;
+                    if(!this.isAdmin || !this.reviewDoc || !this.reviewForm.result) return;
                     this.reviewDoc.reviewStatus = this.reviewForm.result;
                     this.reviewDoc.reviewer = this.reviewForm.reviewer;
                     this.reviewDoc.reviewNote = this.reviewForm.note;
@@ -524,6 +645,7 @@
                 },
 
                 deleteDoc(id) {
+                    if(!this.isAdmin) return;
                     if(confirm('Apakah Anda yakin ingin menghapus arsip dokumen PT Energi Batubara Lestari ini?')) {
                         fileStore.delete(id);
                         this.documents = this.documents.filter(d => d.id !== id);
@@ -531,6 +653,7 @@
                 },
 
                 downloadDocument(doc) {
+                    if(!this.canDownload) return;
                     const file = fileStore.get(doc.id);
                     if (!file) {
                         alert('Dokumen ' + doc.code + ' belum memiliki file terlampir.\nUnggah dokumen lewat tombol "Unggah Dokumen Baru" agar bisa diunduh.');
@@ -547,10 +670,31 @@
                 },
 
                 viewDetail(doc) {
-                    alert('Detail Dokumen EBL:\n\nNomor: ' + doc.code + '\nJudul: ' + doc.title + '\nStandar ISO: ISO ' + doc.iso.join(', ') + '\nVersi: ' + doc.version + '\nFile: ' + (doc.fileName || 'Belum ada file') + '\nStatus: ' + doc.status + '\nHasil Review: ' + (doc.reviewStatus || 'Belum Direview') + (doc.reviewDate ? ' (' + doc.reviewDate + ', ' + doc.reviewer + ')' : '') + (doc.reviewNote ? '\nCatatan Review: ' + doc.reviewNote : ''));
+                    this.closeDetail();
+                    this.detailDoc = doc;
+                    const f = fileStore.get(doc.id);
+                    if (f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name))) {
+                        this.detailUrl = URL.createObjectURL(f);
+                        this.detailIsPdf = true;
+                    }
+                    this.showDetailModal = true;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+
+                closeDetail() {
+                    if (this.detailUrl) URL.revokeObjectURL(this.detailUrl);
+                    this.detailUrl = '';
+                    this.detailIsPdf = false;
+                    this.detailDoc = null;
+                    this.showDetailModal = false;
                 },
 
                 init() {
+                    try {
+                        const saved = USERS.find(x => x.username === sessionStorage.getItem('ebl_user'));
+                        if (saved) this.user = { username: saved.username, name: saved.name, role: saved.role };
+                    } catch (e) {}
+                    this.$watch('user', () => this.$nextTick(() => { lucide.createIcons(); }));
                     this.$nextTick(() => { lucide.createIcons(); });
                     this.$watch('activeModule', () => {
                         this.$nextTick(() => { lucide.createIcons(); });
