@@ -357,7 +357,7 @@
                     { id: 7, moduleId: 7, code: 'HIRADC-EBL-PRJ-05', title: 'HIRADC dan IBPR Pekerjaan Pertambangan dan Operasional Pit', iso: ['45001'], version: 'v3.0', status: 'In Review', author: 'Safety Officer Site', date: '2026-03-01' },
                     { id: 8, moduleId: 8, code: 'ORG-EBL-STRUCT-01', title: 'Struktur Organisasi PT Energi Batubara Lestari dan Uraian Tugas', iso: ['9001'], version: 'v1.5', status: 'Approved', author: 'HR Department', date: '2026-01-05' },
                     { id: 9, moduleId: 9, code: 'MAN-EBL-QHSE-001', title: 'Manual Sistem Manajemen Terintegrasi ISO 9001, 14001, dan 45001 EBL', iso: ['9001', '14001', '45001'], version: 'v1.0', status: 'Approved', author: 'Lead Auditor', date: '2026-01-12' },
-                    { id: 10, moduleId: 10, code: 'TR-EBL-CERT-AW-01', title: 'Daftar Hadir dan Sertifikat Pelatihan Awareness & Internal Auditor ISO EBL', iso: ['9001', '14001', '45001'], version: 'v1.0', status: 'Approved', author: 'Training Specialist', date: '2026-02-18' },
+                    { id: 10, moduleId: 10, code: 'TR-EBL-CERT-AW-01', title: 'Daftar Hadir dan Sertifikat Pelatihan Awareness & Internal Auditor EBL', iso: ['9001', '14001', '45001'], version: 'v1.0', status: 'Approved', author: 'Training Specialist', date: '2026-02-18' },
                     { id: 11, moduleId: 11, code: 'SOP-EBL-SITE-12', title: 'Instruksi Kerja Pengelolaan Limbah B3 dan Tanggap Darurat Tambang Site', iso: ['14001', '45001'], version: 'v1.2', status: 'Approved', author: 'Site Project Manager', date: '2026-02-25' },
                     { id: 12, moduleId: 12, code: 'SOP-EBL-HO-03', title: 'Prosedur Pengadaan Barang dan Jasa Serta Evaluasi Vendor HO', iso: ['9001'], version: 'v2.0', status: 'Approved', author: 'Procurement HO', date: '2026-01-30' }
                 ],
@@ -391,7 +391,6 @@
                         date: new Date().toISOString().split('T')[0]
                     });
                     this.showUploadModal = false;
-                    // Reset form
                     this.newDoc.code = '';
                     this.newDoc.title = '';
                     this.$nextTick(() => { lucide.createIcons(); });
