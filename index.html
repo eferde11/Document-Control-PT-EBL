@@ -334,7 +334,7 @@
                                         <td class="p-4">
                                             <p class="font-semibold text-slate-900 leading-snug max-w-md" x-text="doc.title"></p>
                                             <p x-show="activeModule === 0" class="text-[11px] font-semibold text-emerald-700 mt-0.5" x-text="folderName(doc.moduleId)"></p>
-                                            <p class="text-[11px] text-slate-500 mt-0.5" x-text="'Diupload oleh: ' + doc.author + ' | Tanggal: ' + doc.date"></p>
+                                            <p class="text-[11px] text-slate-500 mt-0.5" x-text="'Diupload oleh: ' + doc.author + ' | Tanggal: ' + doc.date + (doc.updatedAt ? ' | Diperbarui: ' + doc.updatedAt : '')"></p>
                                             <p x-show="doc.fileName" class="text-[11px] text-emerald-700 font-medium mt-1 flex items-center gap-1">
                                                 <i data-lucide="paperclip" class="w-3 h-3"></i><span x-text="doc.fileName + ' (' + doc.fileSize + ')'"></span>
                                             </p>
@@ -352,7 +352,12 @@
                                                 </template>
                                             </div>
                                         </td>
-                                        <td class="p-4 font-mono text-slate-600 whitespace-nowrap" x-text="doc.version"></td>
+                                        <td class="p-4 whitespace-nowrap">
+                                            <span class="font-mono text-slate-700" x-text="doc.version"></span>
+                                            <button @click="viewDetail(doc)" class="block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition"
+                                                    :class="(doc.rev || 0) > 0 ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                                                    :title="'Lihat riwayat revisi'" x-text="(doc.rev || 0) === 0 ? 'Revisi ke-0 (awal)' : 'Revisi ke-' + doc.rev"></button>
+                                        </td>
                                         <td class="p-4 whitespace-nowrap">
                                             <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold inline-flex items-center gap-1"
                                                   :class="{
@@ -382,6 +387,9 @@
                                             <div class="flex items-center justify-center gap-1">
                                                 <button x-show="isAdmin" @click="openReview(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition" title="Review Dokumen">
                                                     <i data-lucide="clipboard-check" class="w-4 h-4"></i> Review
+                                                </button>
+                                                <button x-show="isAdmin" @click="openEdit(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen">
+                                                    <i data-lucide="pencil" class="w-4 h-4"></i>
                                                 </button>
                                                 <button x-show="canDownload" @click="downloadDocument(doc)" :class="doc.fileName ? 'text-emerald-700 hover:bg-emerald-100' : 'text-slate-300 hover:bg-slate-100'" class="p-1.5 rounded-lg transition" :title="doc.fileName ? 'Unduh ' + doc.fileName : 'Belum ada file terlampir'">
                                                     <i data-lucide="download" class="w-4 h-4"></i>
@@ -536,7 +544,7 @@
             <template x-if="detailDoc">
                 <div class="p-6 space-y-4 text-xs">
                     <div>
-                        <p class="font-mono font-semibold text-slate-500" x-text="detailDoc.code + ' · ' + detailDoc.version"></p>
+                        <p class="font-mono font-semibold text-slate-500" x-text="detailDoc.code + ' · ' + detailDoc.version + ' · Revisi ke-' + (detailDoc.rev || 0)"></p>
                         <h4 class="font-display text-lg font-bold text-slate-900 leading-snug mt-1" x-text="detailDoc.title"></h4>
                     </div>
                     <dl class="grid grid-cols-2 gap-x-6 gap-y-3">
@@ -548,6 +556,29 @@
                         <div><dt class="text-slate-500">File</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.fileName ? detailDoc.fileName + ' (' + detailDoc.fileSize + ')' : 'Belum ada file'"></dd></div>
                     </dl>
                     <p x-show="detailDoc.reviewNote" class="p-3 bg-slate-50 border rounded-lg text-slate-600" x-text="'Catatan review: ' + detailDoc.reviewNote"></p>
+                    <div>
+                        <h5 class="font-display font-bold text-slate-900 mb-3" x-text="'Riwayat revisi (' + (detailDoc.rev || 0) + ' perubahan)'"></h5>
+                        <ol class="border-l-2 border-slate-200 ml-1.5 space-y-4">
+                            <template x-for="h in historyOf(detailDoc)" :key="h.rev">
+                                <li class="pl-4 relative">
+                                    <span class="absolute -left-[7px] top-1 w-3 h-3 rounded-full ring-2 ring-white" :class="h.rev === (detailDoc.rev || 0) ? 'bg-emerald-600' : 'bg-slate-300'"></span>
+                                    <p class="font-semibold text-slate-800">
+                                        <span x-text="h.rev === 0 ? 'Dokumen awal' : 'Revisi ke-' + h.rev"></span>
+                                        <span class="font-mono font-medium text-slate-500" x-text="h.version"></span>
+                                        <span x-show="h.rev === (detailDoc.rev || 0)" class="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-semibold">Terbaru</span>
+                                    </p>
+                                    <p class="text-slate-500" x-text="h.date + ' oleh ' + h.by"></p>
+                                    <p class="text-slate-700 mt-0.5" x-text="h.note"></p>
+                                    <ul class="list-disc pl-4 text-slate-500 mt-1" x-show="h.changes && h.changes.length">
+                                        <template x-for="c in h.changes"><li x-text="c"></li></template>
+                                    </ul>
+                                    <button x-show="isAdmin && hasRevFile(detailDoc, h)" @click="downloadRevision(detailDoc, h)" class="mt-1 text-emerald-700 font-semibold inline-flex items-center gap-1">
+                                        <i data-lucide="download" class="w-3 h-3"></i> Unduh file revisi ini
+                                    </button>
+                                </li>
+                            </template>
+                        </ol>
+                    </div>
                     <div x-show="detailIsPdf" class="border rounded-lg overflow-hidden">
                         <iframe :src="detailUrl ? (canDownload ? detailUrl : detailUrl + '#toolbar=0&navpanes=0') : ''" class="w-full h-[55vh]" title="Pratinjau dokumen"></iframe>
                     </div>
@@ -558,6 +589,69 @@
                     </div>
                 </div>
             </template>
+        </div>
+    </div>
+
+    <!-- Modal Edit Dokumen -->
+    <div x-show="showEditModal" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="modal-card bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[92vh] overflow-y-auto border">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500 sticky top-0 z-10">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i data-lucide="pencil" class="w-4 h-4 text-emerald-400"></i> Edit Dokumen</h3>
+                <button @click="showEditModal = false" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form @submit.prevent="submitEdit" class="p-6 space-y-4 text-xs">
+                <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-medium" x-text="editDoc ? 'Revisi saat ini: ke-' + (editDoc.rev || 0) + '. Perubahan yang disimpan akan tercatat sebagai Revisi ke-' + ((editDoc.rev || 0) + 1) + '.' : ''"></div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Folder</label>
+                    <select x-model="editForm.moduleId" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <template x-for="mod in modules" :key="mod.id"><option :value="mod.id" x-text="mod.name"></option></template>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nomor Dokumen</label>
+                        <input type="text" x-model="editForm.code" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono" required>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Versi / Revisi</label>
+                        <input type="text" x-model="editForm.version" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Judul Dokumen</label>
+                    <input type="text" x-model="editForm.title" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Cakupan Standar ISO</label>
+                    <div class="flex gap-4 mt-1">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="9001" x-model="editForm.iso" class="rounded text-emerald-600"> <span class="font-medium text-slate-700">ISO 9001</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="14001" x-model="editForm.iso" class="rounded text-emerald-600"> <span class="font-medium text-slate-700">ISO 14001</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="45001" x-model="editForm.iso" class="rounded text-emerald-600"> <span class="font-medium text-slate-700">ISO 45001</span></label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Status Dokumen</label>
+                    <select x-model="editForm.status" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="Approved">Approved</option>
+                        <option value="In Review">In Review</option>
+                        <option value="Obsolete">Obsolete</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Ganti File (opsional)</label>
+                    <p class="text-slate-400 mb-1" x-text="editDoc && editDoc.fileName ? 'File saat ini: ' + editDoc.fileName : 'Dokumen ini belum memiliki file.'"></p>
+                    <input type="file" x-ref="editFile" accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full border rounded-lg p-2 bg-slate-50 text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Catatan Perubahan</label>
+                    <textarea x-model="editForm.note" rows="3" placeholder="Contoh: Menyesuaikan prosedur dengan peraturan terbaru..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                </div>
+                <p x-show="editError" x-text="editError" class="text-rose-600 font-medium"></p>
+                <div class="pt-4 flex justify-end gap-2 border-t">
+                    <button type="button" @click="showEditModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Revisi</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -601,6 +695,13 @@
         const LOGO_FULL = 'data:image/png;base64,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';
 
         const fileStore = new Map(); // id dokumen -> File (disimpan di memori browser)
+        const triggerDownload = file => {
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url; a.download = file.name;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        };
         const formatSize = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
 
         document.addEventListener('alpine:init', () => {
@@ -622,6 +723,10 @@
                 showUploadModal: false,
                 showInfoModal: false,
                 showReviewModal: false,
+                showEditModal: false,
+                editDoc: null,
+                editForm: { moduleId: 1, code: '', title: '', version: '', iso: [], status: 'Approved', note: '' },
+                editError: '',
                 selectedFilterReview: '',
                 reviewDoc: null,
                 reviewForm: { result: '', reviewer: '', note: '' },
@@ -702,7 +807,7 @@
                 logout() {
                     this.user = null;
                     this.entry = null;
-                    this.showUploadModal = this.showReviewModal = this.showInfoModal = false;
+                    this.showUploadModal = this.showReviewModal = this.showInfoModal = this.showEditModal = false;
                     this.closeDetail();
                     try { sessionStorage.removeItem('ebl_user'); } catch (e) {}
                 },
@@ -741,9 +846,11 @@
                         author: 'Document Controller',
                         date: new Date().toISOString().split('T')[0],
                         fileName: file ? file.name : '',
-                        fileSize: file ? formatSize(file.size) : ''
+                        fileSize: file ? formatSize(file.size) : '',
+                        rev: 0,
+                        history: [{ rev: 0, version: this.newDoc.version, date: new Date().toISOString().split('T')[0], by: this.user.name, note: 'Dokumen pertama diunggah', changes: [], fileName: file ? file.name : '', fileSize: file ? formatSize(file.size) : '' }]
                     });
-                    if (file) fileStore.set(id, file);
+                    if (file) { fileStore.set(id, file); fileStore.set(id + '#0', file); }
                     this.$refs.fileInput.value = '';
                     this.showUploadModal = false;
                     this.newDoc.code = '';
@@ -769,8 +876,68 @@
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
+                historyOf(doc) {
+                    const h = doc.history && doc.history.length ? doc.history : [{ rev: 0, version: doc.version, date: doc.date, by: doc.author, note: 'Dokumen awal', changes: [] }];
+                    return [...h].sort((a, b) => b.rev - a.rev);
+                },
+
+                hasRevFile(doc, h) { return fileStore.has(doc.id + '#' + h.rev); },
+
+                downloadRevision(doc, h) {
+                    if (!this.isAdmin) return;
+                    const f = fileStore.get(doc.id + '#' + h.rev);
+                    if (f) triggerDownload(f);
+                },
+
+                openEdit(doc) {
+                    if (!this.isAdmin) return;
+                    this.editDoc = doc;
+                    this.editForm = { moduleId: doc.moduleId, code: doc.code, title: doc.title, version: doc.version, iso: [...doc.iso], status: doc.status, note: '' };
+                    this.editError = '';
+                    this.showEditModal = true;
+                    this.$nextTick(() => { if (this.$refs.editFile) this.$refs.editFile.value = ''; lucide.createIcons(); });
+                },
+
+                submitEdit() {
+                    if (!this.isAdmin || !this.editDoc) return;
+                    const d = this.editDoc, f = this.editForm;
+                    const file = this.$refs.editFile.files[0] || null;
+                    const code = f.code.trim(), title = f.title.trim(), version = f.version.trim();
+                    const iso = [...f.iso].sort().join(', ');
+                    const moduleId = parseInt(f.moduleId);
+                    const changes = [];
+                    if (code !== d.code) changes.push('Nomor dokumen: ' + d.code + ' menjadi ' + code);
+                    if (title !== d.title) changes.push('Judul dokumen diubah');
+                    if (version !== d.version) changes.push('Versi: ' + d.version + ' menjadi ' + version);
+                    if (iso !== [...d.iso].sort().join(', ')) changes.push('Cakupan standar menjadi ISO ' + (iso || '-'));
+                    if (f.status !== d.status) changes.push('Status: ' + d.status + ' menjadi ' + f.status);
+                    if (moduleId !== d.moduleId) changes.push('Dipindahkan ke folder ' + this.folderName(moduleId));
+                    if (file) changes.push('File diganti: ' + file.name);
+                    if (!changes.length) { this.editError = 'Belum ada perubahan. Ubah data atau ganti file terlebih dahulu.'; return; }
+                    if (!f.note.trim()) { this.editError = 'Isi catatan perubahan agar revisi tercatat.'; return; }
+
+                    // simpan kondisi awal sebagai Revisi ke-0 sebelum diubah
+                    if (!d.history) d.history = [{ rev: 0, version: d.version, date: d.date, by: d.author, note: 'Dokumen awal', changes: [], fileName: d.fileName || '', fileSize: d.fileSize || '' }];
+                    if (!fileStore.has(d.id + '#0') && fileStore.has(d.id)) fileStore.set(d.id + '#0', fileStore.get(d.id));
+
+                    const today = new Date().toISOString().split('T')[0];
+                    d.rev = (d.rev || 0) + 1;
+                    Object.assign(d, { code, title, version, iso: [...f.iso], status: f.status, moduleId, updatedAt: today });
+                    if (file) {
+                        d.fileName = file.name;
+                        d.fileSize = formatSize(file.size);
+                        fileStore.set(d.id, file);
+                        fileStore.set(d.id + '#' + d.rev, file);
+                    }
+                    d.history.push({ rev: d.rev, version, date: today, by: this.user.name, note: f.note.trim(), changes, fileName: file ? file.name : '', fileSize: file ? formatSize(file.size) : '' });
+                    this.showEditModal = false;
+                    this.editDoc = null;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+
                 deleteDoc(id) {
                     if(!this.isAdmin) return;
+                    [...fileStore.keys()].forEach(k => { if (String(k).startsWith(id + '#')) fileStore.delete(k); });
                     if(confirm('Apakah Anda yakin ingin menghapus arsip dokumen PT Energi Batubara Lestari ini?')) {
                         fileStore.delete(id);
                         this.documents = this.documents.filter(d => d.id !== id);
