@@ -250,6 +250,7 @@
                     <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">Sistem Manajemen Terintegrasi PT Energi Batubara Lestari (ISO 9001, 14001, 45001)</p>
                 </div>
                 <div class="flex items-center gap-3">
+                    <a x-show="isAdmin" :href="spFolderUrl" target="_blank" rel="noopener noreferrer" class="border border-slate-300 hover:border-sky-600 hover:text-sky-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="folder-open" class="w-4 h-4"></i> Folder SharePoint</a>
                     <span x-show="!isAdmin" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Mode lihat saja</span>
                     <button x-show="isAdmin" @click="showUploadModal = true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
                         <i data-lucide="upload-cloud" class="w-4 h-4"></i> Unggah Dokumen Baru
@@ -388,6 +389,7 @@
                                                 <button x-show="isAdmin" @click="openReview(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition" title="Review Dokumen">
                                                     <i data-lucide="clipboard-check" class="w-4 h-4"></i> Review
                                                 </button>
+                                                <a x-show="doc.spUrl && canOpenSp" :href="safeUrl(doc.spUrl)" target="_blank" rel="noopener noreferrer" class="p-1.5 hover:bg-sky-100 rounded-lg text-sky-700 transition inline-flex" title="Buka di SharePoint"><i data-lucide="external-link" class="w-4 h-4"></i></a>
                                                 <button x-show="isAdmin" @click="openEdit(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen">
                                                     <i data-lucide="pencil" class="w-4 h-4"></i>
                                                 </button>
@@ -481,6 +483,11 @@
                     <label class="block font-semibold text-slate-700 mb-1">File Dokumen (PDF/DOCX/XLSX)</label>
                     <input type="file" x-ref="fileInput" accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full border rounded-lg p-2 bg-slate-50 text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
                 </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Link file di SharePoint (opsional)</label>
+                    <input type="url" x-model="newDoc.spUrl" placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-slate-400 mt-1">Unggah file ke folder SharePoint lewat tombol "Folder SharePoint", lalu salin link berbagi file tersebut dan tempel di sini.</p>
+                </div>
                 <div class="pt-4 flex justify-end gap-2 border-t">
                     <button type="button" @click="showUploadModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
                     <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Dokumen</button>
@@ -572,6 +579,7 @@
                                     <ul class="list-disc pl-4 text-slate-500 mt-1" x-show="h.changes && h.changes.length">
                                         <template x-for="c in h.changes"><li x-text="c"></li></template>
                                     </ul>
+                                    <a x-show="h.spUrl && canOpenSp" :href="safeUrl(h.spUrl)" target="_blank" rel="noopener noreferrer" class="mt-1 mr-3 text-sky-700 font-semibold inline-flex items-center gap-1"><i data-lucide="external-link" class="w-3 h-3"></i> Buka file revisi ini di SharePoint</a>
                                     <button x-show="isAdmin && hasRevFile(detailDoc, h)" @click="downloadRevision(detailDoc, h)" class="mt-1 text-emerald-700 font-semibold inline-flex items-center gap-1">
                                         <i data-lucide="download" class="w-3 h-3"></i> Unduh file revisi ini
                                     </button>
@@ -584,6 +592,7 @@
                     </div>
                     <p x-show="!detailIsPdf" class="p-4 bg-slate-50 border border-dashed rounded-lg text-slate-500 text-center" x-text="detailDoc.fileName ? 'Pratinjau hanya tersedia untuk file PDF. File Word/Excel dapat dibuka setelah diunduh.' : 'Dokumen ini belum memiliki file terlampir.'"></p>
                     <div class="pt-4 border-t flex justify-end gap-2">
+                        <a x-show="detailDoc.spUrl && canOpenSp" :href="safeUrl(detailDoc.spUrl)" target="_blank" rel="noopener noreferrer" class="px-4 py-2 border rounded-lg text-sky-700 hover:bg-sky-50 font-semibold flex items-center gap-2"><i data-lucide="external-link" class="w-4 h-4"></i> Buka di SharePoint</a>
                         <button x-show="canDownload && detailDoc.fileName" @click="downloadDocument(detailDoc)" class="px-4 py-2 border rounded-lg text-emerald-700 hover:bg-emerald-50 font-semibold flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
                         <button @click="closeDetail()" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-semibold">Tutup</button>
                     </div>
@@ -643,6 +652,11 @@
                     <input type="file" x-ref="editFile" accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full border rounded-lg p-2 bg-slate-50 text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
                 </div>
                 <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Link file di SharePoint</label>
+                    <input type="url" x-model="editForm.spUrl" placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-slate-400 mt-1">Isi dengan link file revisi terbaru di SharePoint.</p>
+                </div>
+                <div>
                     <label class="block font-semibold text-slate-700 mb-1">Catatan Perubahan</label>
                     <textarea x-model="editForm.note" rows="3" placeholder="Contoh: Menyesuaikan prosedur dengan peraturan terbaru..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
                 </div>
@@ -688,6 +702,8 @@
         const USERS = [
             { username: 'docoebl', name: 'Document Controller EBL', role: 'admin', hash: '32e00183831ffb9cc1a9089e3ad39da85bf9e7b137b858815c041236d9f1bc12' }
         ];
+        const SHAREPOINT_FOLDER_URL = 'https://hitdigitalid-my.sharepoint.com/:f:/g/personal/fani_damayanti_hasnurgroup_com/IgBr0caM1Ym0So0NpFrVRT-YAcGx49eJlsNFg1X3KG3DcUM?e=RljwIT'; // folder penyimpanan dokumen di SharePoint
+        const VIEWER_CAN_OPEN_SHAREPOINT = true; // false = tombol "Buka di SharePoint" hanya untuk admin
         const VIEWER_CAN_DOWNLOAD = false; // false = viewer hanya melihat, tanpa unduh
         const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ebl:' + t)))].map(x => x.toString(16).padStart(2, '0')).join('');
 
@@ -725,13 +741,15 @@
                 showReviewModal: false,
                 showEditModal: false,
                 editDoc: null,
-                editForm: { moduleId: 1, code: '', title: '', version: '', iso: [], status: 'Approved', note: '' },
+                editForm: { moduleId: 1, code: '', title: '', version: '', iso: [], status: 'Approved', note: '', spUrl: '' },
                 editError: '',
                 selectedFilterReview: '',
                 reviewDoc: null,
                 reviewForm: { result: '', reviewer: '', note: '' },
                 
+                spFolderUrl: SHAREPOINT_FOLDER_URL,
                 newDoc: {
+                    spUrl: '',
                     moduleId: 1,
                     code: '',
                     title: '',
@@ -782,6 +800,8 @@
                 },
 
                 get isAdmin() { return !!this.user && this.user.role === 'admin'; },
+                get canOpenSp() { return this.isAdmin || VIEWER_CAN_OPEN_SHAREPOINT; },
+                safeUrl(u) { return /^https:\/\//i.test(u || '') ? u : '#'; },
                 get canDownload() { return this.isAdmin || VIEWER_CAN_DOWNLOAD; },
 
                 async login() {
@@ -834,6 +854,8 @@
                 submitNewDocument() {
                     if(!this.isAdmin || !this.newDoc.code || !this.newDoc.title) return;
                     const file = this.$refs.fileInput.files[0] || null;
+                    const spUrlNew = (this.newDoc.spUrl || '').trim();
+                    if (spUrlNew && !/^https:\/\//i.test(spUrlNew)) { alert('Link SharePoint harus diawali https://'); return; }
                     const id = Date.now();
                     this.documents.unshift({
                         id: id,
@@ -847,14 +869,16 @@
                         date: new Date().toISOString().split('T')[0],
                         fileName: file ? file.name : '',
                         fileSize: file ? formatSize(file.size) : '',
+                        spUrl: spUrlNew,
                         rev: 0,
-                        history: [{ rev: 0, version: this.newDoc.version, date: new Date().toISOString().split('T')[0], by: this.user.name, note: 'Dokumen pertama diunggah', changes: [], fileName: file ? file.name : '', fileSize: file ? formatSize(file.size) : '' }]
+                        history: [{ rev: 0, spUrl: spUrlNew, version: this.newDoc.version, date: new Date().toISOString().split('T')[0], by: this.user.name, note: 'Dokumen pertama diunggah', changes: [], fileName: file ? file.name : '', fileSize: file ? formatSize(file.size) : '' }]
                     });
                     if (file) { fileStore.set(id, file); fileStore.set(id + '#0', file); }
                     this.$refs.fileInput.value = '';
                     this.showUploadModal = false;
                     this.newDoc.code = '';
                     this.newDoc.title = '';
+                    this.newDoc.spUrl = '';
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
@@ -892,7 +916,7 @@
                 openEdit(doc) {
                     if (!this.isAdmin) return;
                     this.editDoc = doc;
-                    this.editForm = { moduleId: doc.moduleId, code: doc.code, title: doc.title, version: doc.version, iso: [...doc.iso], status: doc.status, note: '' };
+                    this.editForm = { moduleId: doc.moduleId, code: doc.code, title: doc.title, version: doc.version, iso: [...doc.iso], status: doc.status, note: '', spUrl: doc.spUrl || '' };
                     this.editError = '';
                     this.showEditModal = true;
                     this.$nextTick(() => { if (this.$refs.editFile) this.$refs.editFile.value = ''; lucide.createIcons(); });
@@ -913,23 +937,27 @@
                     if (f.status !== d.status) changes.push('Status: ' + d.status + ' menjadi ' + f.status);
                     if (moduleId !== d.moduleId) changes.push('Dipindahkan ke folder ' + this.folderName(moduleId));
                     if (file) changes.push('File diganti: ' + file.name);
+                    const spUrl = (f.spUrl || '').trim();
+                    if (spUrl && !/^https:\/\//i.test(spUrl)) { this.editError = 'Link SharePoint harus diawali https://'; return; }
+                    const spChanged = spUrl !== (d.spUrl || '');
+                    if (spChanged) changes.push('Link file SharePoint diperbarui');
                     if (!changes.length) { this.editError = 'Belum ada perubahan. Ubah data atau ganti file terlebih dahulu.'; return; }
                     if (!f.note.trim()) { this.editError = 'Isi catatan perubahan agar revisi tercatat.'; return; }
 
                     // simpan kondisi awal sebagai Revisi ke-0 sebelum diubah
-                    if (!d.history) d.history = [{ rev: 0, version: d.version, date: d.date, by: d.author, note: 'Dokumen awal', changes: [], fileName: d.fileName || '', fileSize: d.fileSize || '' }];
+                    if (!d.history) d.history = [{ rev: 0, version: d.version, date: d.date, by: d.author, note: 'Dokumen awal', changes: [], fileName: d.fileName || '', fileSize: d.fileSize || '', spUrl: d.spUrl || '' }];
                     if (!fileStore.has(d.id + '#0') && fileStore.has(d.id)) fileStore.set(d.id + '#0', fileStore.get(d.id));
 
                     const today = new Date().toISOString().split('T')[0];
                     d.rev = (d.rev || 0) + 1;
-                    Object.assign(d, { code, title, version, iso: [...f.iso], status: f.status, moduleId, updatedAt: today });
+                    Object.assign(d, { code, title, version, iso: [...f.iso], status: f.status, moduleId, updatedAt: today, spUrl });
                     if (file) {
                         d.fileName = file.name;
                         d.fileSize = formatSize(file.size);
                         fileStore.set(d.id, file);
                         fileStore.set(d.id + '#' + d.rev, file);
                     }
-                    d.history.push({ rev: d.rev, version, date: today, by: this.user.name, note: f.note.trim(), changes, fileName: file ? file.name : '', fileSize: file ? formatSize(file.size) : '' });
+                    d.history.push({ rev: d.rev, spUrl: spChanged ? spUrl : '', version, date: today, by: this.user.name, note: f.note.trim(), changes, fileName: file ? file.name : '', fileSize: file ? formatSize(file.size) : '' });
                     this.showEditModal = false;
                     this.editDoc = null;
                     this.$nextTick(() => { lucide.createIcons(); });
@@ -982,6 +1010,14 @@
                 },
 
                 init() {
+                    try {
+                        const raw = localStorage.getItem('ebl_docs_v1');
+                        if (raw) {
+                            const saved = JSON.parse(raw);
+                            if (Array.isArray(saved)) this.documents = saved.map(d => (d.fileName && !fileStore.has(d.id)) ? { ...d, fileName: '', fileSize: '' } : d);
+                        }
+                    } catch (e) {}
+                    this.$watch('documents', v => { try { localStorage.setItem('ebl_docs_v1', JSON.stringify(v)); } catch (e) {} });
                     try {
                         const key = sessionStorage.getItem('ebl_user');
                         if (key === 'viewer') this.user = { username: 'viewer', name: 'Viewer', role: 'viewer' };
