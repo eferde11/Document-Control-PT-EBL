@@ -9,7 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.39.0/lib/msal-browser.min.js"></script>
     <script>
         tailwind.config = { theme: { extend: {
             fontFamily: { sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'], mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'], display: ['"Bricolage Grotesque"', '"IBM Plex Sans"', 'sans-serif'] },
@@ -109,7 +108,7 @@
                     </div>
                     <p class="mt-3 text-xs text-slate-400">Viewer langsung masuk tanpa login. Login khusus Document Controller.</p>
                     <dl class="mt-10 pt-6 border-t border-slate-100 flex gap-8 sm:gap-12">
-                        <div><dt class="text-xs text-slate-500">Folder dokumen</dt><dd class="font-display text-2xl font-bold text-brand-navy">12</dd></div>
+                        <div><dt class="text-xs text-slate-500">Folder dokumen</dt><dd class="font-display text-2xl font-bold text-brand-navy">13</dd></div>
                         <div><dt class="text-xs text-slate-500">Standar ISO</dt><dd class="font-display text-2xl font-bold text-brand-leaf">3</dd></div>
                         <div><dt class="text-xs text-slate-500">Cakupan</dt><dd class="font-display text-2xl font-bold text-brand-navy">Site &amp; HO</dd></div>
                     </dl>
@@ -254,7 +253,7 @@
                     <a x-show="isAdmin" :href="spFolderUrl" target="_blank" rel="noopener noreferrer" class="border border-slate-300 hover:border-sky-600 hover:text-sky-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="folder-open" class="w-4 h-4"></i> Folder SharePoint</a>
                     <span x-show="!isAdmin" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Mode lihat saja</span>
                     <button x-show="isAdmin" @click="showUploadModal = true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
-                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Unggah Dokumen Baru
+                        <i data-lucide="file-plus" class="w-4 h-4"></i> Tambah Dokumen
                     </button>
                 </div>
             </header>
@@ -336,11 +335,8 @@
                                         <td class="p-4">
                                             <p class="font-semibold text-slate-900 leading-snug max-w-md" x-text="doc.title"></p>
                                             <p x-show="activeModule === 0" class="text-[11px] font-semibold text-emerald-700 mt-0.5" x-text="folderName(doc.moduleId)"></p>
-                                            <p class="text-[11px] text-slate-500 mt-0.5" x-text="'Diupload oleh: ' + doc.author + ' | Tanggal: ' + doc.date + (doc.updatedAt ? ' | Diperbarui: ' + doc.updatedAt : '')"></p>
-                                            <p x-show="doc.fileName" class="text-[11px] text-emerald-700 font-medium mt-1 flex items-center gap-1">
-                                                <i data-lucide="paperclip" class="w-3 h-3"></i><span x-text="doc.fileName + ' (' + doc.fileSize + ')'"></span>
-                                            </p>
-                                        </td>
+                                            <p class="text-[11px] text-slate-500 mt-0.5" x-text="'Didaftarkan oleh: ' + doc.author + ' | Tanggal: ' + doc.date + (doc.updatedAt ? ' | Diperbarui: ' + doc.updatedAt : '')"></p>
+                                            </td>
                                         <td class="p-4 whitespace-nowrap">
                                             <div class="flex gap-1.5">
                                                 <template x-for="iso in doc.iso" :key="iso">
@@ -365,13 +361,13 @@
                                                   :class="{
                                                       'bg-emerald-100 text-emerald-700': doc.status === 'Approved',
                                                       'bg-amber-100 text-amber-700': doc.status === 'In Review',
-                                                      'bg-rose-100 text-rose-700': doc.status === 'Obsolete'
+                                                      'bg-rose-100 text-rose-700': doc.status === 'Obsolete' || doc.status === 'Tidak Approved'
                                                   }">
                                                 <span class="w-1.5 h-1.5 rounded-full"
                                                       :class="{
                                                           'bg-emerald-500': doc.status === 'Approved',
                                                           'bg-amber-500': doc.status === 'In Review',
-                                                          'bg-rose-500': doc.status === 'Obsolete'
+                                                          'bg-rose-500': doc.status === 'Obsolete' || doc.status === 'Tidak Approved'
                                                       }"></span>
                                                 <span x-text="doc.status"></span>
                                             </span>
@@ -386,16 +382,14 @@
                                             <p class="text-[10px] text-slate-400 mt-1" x-show="doc.reviewDate" x-text="'Direview: ' + doc.reviewDate + ' oleh ' + doc.reviewer"></p>
                                         </td>
                                         <td class="p-4 text-center whitespace-nowrap">
-                                            <div class="flex items-center justify-center gap-1">
+                                            <div class="flex items-center justify-end gap-1">
                                                 <button x-show="isAdmin" @click="openReview(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition" title="Review Dokumen">
                                                     <i data-lucide="clipboard-check" class="w-4 h-4"></i> Review
                                                 </button>
-                                                <a x-show="doc.spUrl && canOpenSp" :href="safeUrl(doc.spUrl)" target="_blank" rel="noopener noreferrer" class="p-1.5 hover:bg-sky-100 rounded-lg text-sky-700 transition inline-flex" title="Buka di SharePoint"><i data-lucide="external-link" class="w-4 h-4"></i></a>
+                                                <a x-show="doc.spUrl && canOpenSp" :href="safeUrl(doc.spUrl)" target="_blank" rel="noopener noreferrer" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition" title="Buka dokumen di SharePoint"><i data-lucide="external-link" class="w-4 h-4"></i> Buka</a>
+                                                <button x-show="isAdmin" @click="openApproval(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-ochre-600/50 text-ochre-600 text-xs font-semibold hover:bg-ochre-500 hover:text-slate-950 transition" title="Approval dokumen"><i data-lucide="badge-check" class="w-4 h-4"></i> Approval</button>
                                                 <button x-show="isAdmin" @click="openEdit(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen">
                                                     <i data-lucide="pencil" class="w-4 h-4"></i>
-                                                </button>
-                                                <button x-show="canDownload" @click="downloadDocument(doc)" :class="doc.fileName ? 'text-emerald-700 hover:bg-emerald-100' : 'text-slate-300 hover:bg-slate-100'" class="p-1.5 rounded-lg transition" :title="doc.fileName ? 'Unduh ' + doc.fileName : 'Belum ada file terlampir'">
-                                                    <i data-lucide="download" class="w-4 h-4"></i>
                                                 </button>
                                                 <button @click="viewDetail(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Lihat dokumen">
                                                     <i data-lucide="eye" class="w-4 h-4"></i>
@@ -416,7 +410,7 @@
                                                 <i data-lucide="folder-open" class="w-6 h-6"></i>
                                             </div>
                                             <p class="text-sm font-medium text-slate-600">Tidak ada dokumen ditemukan pada modul ini.</p>
-                                            <p x-show="isAdmin" class="text-xs text-slate-400">Silakan gunakan tombol "Unggah Dokumen Baru" untuk menambahkan arsip PT Energi Batubara Lestari.</p>
+                                            <p x-show="isAdmin" class="text-xs text-slate-400">Silakan gunakan tombol "Tambah Dokumen" untuk menambahkan arsip PT Energi Batubara Lestari.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -434,7 +428,7 @@
         <div class="bg-white modal-card rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border">
             <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500">
                 <h3 class="font-bold text-sm flex items-center gap-2">
-                    <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-400"></i> Form Unggah Dokumen PT Energi Batubara Lestari
+                    <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-400"></i> Tambah Dokumen PT Energi Batubara Lestari
                 </h3>
                 <button @click="showUploadModal = false" class="text-slate-400 hover:text-white">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -481,20 +475,13 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block font-semibold text-slate-700 mb-1">File Dokumen (PDF/DOCX/XLSX)</label>
-                    <input type="file" x-ref="fileInput" :required="spAuto" accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full border rounded-lg p-2 bg-slate-50 text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
-                </div>
-                <div x-show="spAuto" class="p-3 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-medium">File akan langsung diunggah ke folder SharePoint "WEBSITE ISO" (subfolder sesuai kategori). Anda akan diminta masuk dengan akun Microsoft.</div>
-                <div x-show="!spAuto" class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">Unggah langsung ke SharePoint belum aktif (Client ID dan Tenant ID belum diisi di index.html). Sementara, unggah file lewat tombol "Folder SharePoint", lalu tempel linknya di bawah.</div>
-                <div x-show="!spAuto">
-                    <label class="block font-semibold text-slate-700 mb-1">Link file di SharePoint (opsional)</label>
-                    <input type="url" x-model="newDoc.spUrl" placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <label class="block font-semibold text-slate-700 mb-1">Link Dokumen di SharePoint</label>
+                    <input type="url" x-model="newDoc.spUrl" required placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     <p class="text-slate-400 mt-1">Unggah file ke folder SharePoint lewat tombol "Folder SharePoint", lalu salin link berbagi file tersebut dan tempel di sini.</p>
                 </div>
-                <p x-show="spBusy" class="text-sky-700 font-semibold" x-text="'Mengunggah ke SharePoint... ' + spProgress + '%'"></p>
                 <div class="pt-4 flex justify-end gap-2 border-t">
                     <button type="button" @click="showUploadModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
-                    <button type="submit" :disabled="spBusy" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-semibold shadow-sm" x-text="spBusy ? 'Mengunggah...' : 'Simpan Dokumen'"></button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Dokumen</button>
                 </div>
             </form>
         </div>
@@ -563,10 +550,11 @@
                         <div><dt class="text-slate-500">Standar ISO</dt><dd class="font-semibold text-slate-800" x-text="'ISO ' + detailDoc.iso.join(', ')"></dd></div>
                         <div><dt class="text-slate-500">Status dokumen</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.status"></dd></div>
                         <div><dt class="text-slate-500">Hasil review</dt><dd class="font-semibold text-slate-800" x-text="(detailDoc.reviewStatus || 'Belum Direview') + (detailDoc.reviewDate ? ' (' + detailDoc.reviewDate + ', ' + detailDoc.reviewer + ')' : '')"></dd></div>
-                        <div><dt class="text-slate-500">Diupload oleh</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.author + ', ' + detailDoc.date"></dd></div>
-                        <div><dt class="text-slate-500">File</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.fileName ? detailDoc.fileName + ' (' + detailDoc.fileSize + ')' : 'Belum ada file'"></dd></div>
+                        <div><dt class="text-slate-500">Didaftarkan oleh</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.author + ', ' + detailDoc.date"></dd></div>
+                        <div x-show="detailDoc.approvalDate"><dt class="text-slate-500">Approval</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.status + ' (' + detailDoc.approvalDate + ', ' + detailDoc.approver + ')'"></dd></div>
                     </dl>
                     <p x-show="detailDoc.reviewNote" class="p-3 bg-slate-50 border rounded-lg text-slate-600" x-text="'Catatan review: ' + detailDoc.reviewNote"></p>
+                    <p x-show="detailDoc.approvalNote" class="p-3 bg-slate-50 border rounded-lg text-slate-600" x-text="'Catatan approval: ' + detailDoc.approvalNote"></p>
                     <div>
                         <h5 class="font-display font-bold text-slate-900 mb-3" x-text="'Riwayat revisi (' + (detailDoc.rev || 0) + ' perubahan)'"></h5>
                         <ol class="border-l-2 border-slate-200 ml-1.5 space-y-4">
@@ -584,20 +572,13 @@
                                         <template x-for="c in h.changes"><li x-text="c"></li></template>
                                     </ul>
                                     <a x-show="h.spUrl && canOpenSp" :href="safeUrl(h.spUrl)" target="_blank" rel="noopener noreferrer" class="mt-1 mr-3 text-sky-700 font-semibold inline-flex items-center gap-1"><i data-lucide="external-link" class="w-3 h-3"></i> Buka file revisi ini di SharePoint</a>
-                                    <button x-show="isAdmin && hasRevFile(detailDoc, h)" @click="downloadRevision(detailDoc, h)" class="mt-1 text-emerald-700 font-semibold inline-flex items-center gap-1">
-                                        <i data-lucide="download" class="w-3 h-3"></i> Unduh file revisi ini
-                                    </button>
-                                </li>
+                                    </li>
                             </template>
                         </ol>
                     </div>
-                    <div x-show="detailIsPdf" class="border rounded-lg overflow-hidden">
-                        <iframe :src="detailUrl ? (canDownload ? detailUrl : detailUrl + '#toolbar=0&navpanes=0') : ''" class="w-full h-[55vh]" title="Pratinjau dokumen"></iframe>
-                    </div>
-                    <p x-show="!detailIsPdf" class="p-4 bg-slate-50 border border-dashed rounded-lg text-slate-500 text-center" x-text="detailDoc.fileName ? 'Pratinjau hanya tersedia untuk file PDF. File Word/Excel dapat dibuka setelah diunduh.' : 'Dokumen ini belum memiliki file terlampir.'"></p>
+                    <p x-show="!detailDoc.spUrl" class="p-4 bg-slate-50 border border-dashed rounded-lg text-slate-500 text-center">Dokumen ini belum memiliki link SharePoint. Admin dapat menambahkannya lewat tombol edit.</p>
                     <div class="pt-4 border-t flex justify-end gap-2">
-                        <a x-show="detailDoc.spUrl && canOpenSp" :href="safeUrl(detailDoc.spUrl)" target="_blank" rel="noopener noreferrer" class="px-4 py-2 border rounded-lg text-sky-700 hover:bg-sky-50 font-semibold flex items-center gap-2"><i data-lucide="external-link" class="w-4 h-4"></i> Buka di SharePoint</a>
-                        <button x-show="canDownload && detailDoc.fileName" @click="downloadDocument(detailDoc)" class="px-4 py-2 border rounded-lg text-emerald-700 hover:bg-emerald-50 font-semibold flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
+                        <a x-show="detailDoc.spUrl && canOpenSp" :href="safeUrl(detailDoc.spUrl)" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2"><i data-lucide="external-link" class="w-4 h-4"></i> Buka dokumen di SharePoint</a>
                         <button @click="closeDetail()" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-semibold">Tutup</button>
                     </div>
                 </div>
@@ -647,29 +628,64 @@
                     <select x-model="editForm.status" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         <option value="Approved">Approved</option>
                         <option value="In Review">In Review</option>
+                        <option value="Tidak Approved">Tidak Approved</option>
                         <option value="Obsolete">Obsolete</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Ganti File (opsional)</label>
-                    <p class="text-slate-400 mb-1" x-text="editDoc && editDoc.fileName ? 'File saat ini: ' + editDoc.fileName : 'Dokumen ini belum memiliki file.'"></p>
-                    <input type="file" x-ref="editFile" accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full border rounded-lg p-2 bg-slate-50 text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
-                </div>
-                <div x-show="!spAuto">
-                    <label class="block font-semibold text-slate-700 mb-1">Link file di SharePoint</label>
-                    <input type="url" x-model="editForm.spUrl" placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <p class="text-slate-400 mt-1">Isi dengan link file revisi terbaru di SharePoint.</p>
+                    <label class="block font-semibold text-slate-700 mb-1">Link Dokumen di SharePoint</label>
+                    <input type="url" x-model="editForm.spUrl" required placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-slate-400 mt-1">Untuk revisi baru, unggah file revisi ke SharePoint lalu tempel link terbarunya di sini.</p>
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Catatan Perubahan</label>
                     <textarea x-model="editForm.note" rows="3" placeholder="Contoh: Menyesuaikan prosedur dengan peraturan terbaru..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
                 </div>
-                <p x-show="spAuto" class="text-sky-700">File pengganti akan langsung diunggah ke SharePoint sebagai file revisi baru.</p>
-                <p x-show="spBusy" class="text-sky-700 font-semibold" x-text="'Mengunggah ke SharePoint... ' + spProgress + '%'"></p>
                 <p x-show="editError" x-text="editError" class="text-rose-600 font-medium"></p>
                 <div class="pt-4 flex justify-end gap-2 border-t">
                     <button type="button" @click="showEditModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
-                    <button type="submit" :disabled="spBusy" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-semibold shadow-sm">Simpan Revisi</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Revisi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Approval Dokumen -->
+    <div x-show="showApprovalModal" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="modal-card bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i data-lucide="badge-check" class="w-4 h-4 text-ochre-400"></i> Approval Dokumen</h3>
+                <button @click="showApprovalModal = false" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form @submit.prevent="submitApproval" class="p-6 space-y-4 text-xs">
+                <div class="p-3 bg-slate-50 rounded-lg border">
+                    <p class="font-mono font-semibold text-slate-700" x-text="approvalDoc ? approvalDoc.code + ' (' + approvalDoc.version + ')' : ''"></p>
+                    <p class="text-slate-600 mt-0.5" x-text="approvalDoc ? approvalDoc.title : ''"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Keputusan</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center gap-2 border rounded-lg p-3 cursor-pointer" :class="approvalForm.result === 'Approved' ? 'border-emerald-500 bg-emerald-50' : ''">
+                            <input type="radio" value="Approved" x-model="approvalForm.result" class="text-emerald-600">
+                            <span class="font-medium text-slate-700">Approved</span>
+                        </label>
+                        <label class="flex items-center gap-2 border rounded-lg p-3 cursor-pointer" :class="approvalForm.result === 'Tidak Approved' ? 'border-rose-400 bg-rose-50' : ''">
+                            <input type="radio" value="Tidak Approved" x-model="approvalForm.result" class="text-rose-600">
+                            <span class="font-medium text-slate-700">Tidak Approved</span>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nama Approver</label>
+                    <input type="text" x-model="approvalForm.approver" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Catatan</label>
+                    <textarea x-model="approvalForm.note" rows="3" placeholder="Contoh: Sudah sesuai / Perlu perbaikan pada bagian prosedur..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                </div>
+                <div class="pt-4 flex justify-end gap-2 border-t">
+                    <button type="button" @click="showApprovalModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
+                    <button type="submit" :disabled="!approvalForm.result" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-semibold shadow-sm">Simpan Keputusan</button>
                 </div>
             </form>
         </div>
@@ -709,86 +725,13 @@
             { username: 'docoebl', name: 'Document Controller EBL', role: 'admin', hash: '32e00183831ffb9cc1a9089e3ad39da85bf9e7b137b858815c041236d9f1bc12' }
         ];
         const SHAREPOINT_FOLDER_URL = 'https://hitdigitalid-my.sharepoint.com/:f:/g/personal/fani_damayanti_hasnurgroup_com/IgBr0caM1Ym0So0NpFrVRT-YAcGx49eJlsNFg1X3KG3DcUM?e=RljwIT'; // folder penyimpanan dokumen di SharePoint
-        // Unggah otomatis ke SharePoint lewat Microsoft Graph. Isi dua nilai ini setelah IT mendaftarkan aplikasi di Microsoft Entra ID (lihat README).
-        const MS_GRAPH = {
-            clientId: '',   // Application (client) ID
-            tenantId: '',   // Directory (tenant) ID
-            redirectUri: location.origin + location.pathname.replace(/index\.html$/, '')
-        };
         const VIEWER_CAN_OPEN_SHAREPOINT = true; // false = tombol "Buka di SharePoint" hanya untuk admin
-        const VIEWER_CAN_DOWNLOAD = false; // false = viewer hanya melihat, tanpa unduh
         const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ebl:' + t)))].map(x => x.toString(16).padStart(2, '0')).join('');
 
         const LOGO_MARK = 'data:image/png;base64,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';
         const LOGO_FULL = 'data:image/png;base64,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';
 
-        const spSafe = t => String(t || '').replace(/[\\/:*?"<>|#%~&{}]/g, '-').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '').slice(0, 100) || 'dokumen';
-        const spExt = n => { const m = /\.[A-Za-z0-9]{1,5}$/.exec(n || ''); return m ? m[0].toLowerCase() : ''; };
-
-        let msalApp = null, spTarget = null;
-        async function spToken() {
-            if (typeof msal === 'undefined') throw new Error('Library login Microsoft gagal dimuat. Periksa koneksi internet.');
-            if (!msalApp) {
-                msalApp = new msal.PublicClientApplication({
-                    auth: { clientId: MS_GRAPH.clientId, authority: 'https://login.microsoftonline.com/' + MS_GRAPH.tenantId, redirectUri: MS_GRAPH.redirectUri },
-                    cache: { cacheLocation: 'sessionStorage' }
-                });
-                if (msalApp.initialize) await msalApp.initialize();
-            }
-            const scopes = ['Files.ReadWrite.All'];
-            const account = msalApp.getAllAccounts()[0];
-            if (account) {
-                try { return (await msalApp.acquireTokenSilent({ scopes, account })).accessToken; } catch (e) {}
-            }
-            return (await msalApp.acquireTokenPopup({ scopes, account: account || undefined, prompt: account ? undefined : 'select_account' })).accessToken;
-        }
-        async function spResolveFolder(token) {
-            if (spTarget) return spTarget;
-            const id = 'u!' + btoa(SHAREPOINT_FOLDER_URL).replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
-            const r = await fetch('https://graph.microsoft.com/v1.0/shares/' + id + '/driveItem?$select=id,name,parentReference', { headers: { Authorization: 'Bearer ' + token } });
-            if (!r.ok) throw new Error('Folder SharePoint tidak bisa diakses (kode ' + r.status + '). Pastikan akun Microsoft Anda punya hak edit di folder tersebut.');
-            const it = await r.json();
-            spTarget = { driveId: it.parentReference.driveId, itemId: it.id };
-            return spTarget;
-        }
-        // Mengunggah file ke folder SharePoint (subfolder dibuat otomatis). Mengembalikan driveItem (webUrl, name).
-        async function uploadToSharePoint(file, relPath, onProgress) {
-            const token = await spToken();
-            const t = await spResolveFolder(token);
-            const path = relPath.split('/').map(encodeURIComponent).join('/');
-            const base = 'https://graph.microsoft.com/v1.0/drives/' + t.driveId + '/items/' + t.itemId + ':/' + path + ':';
-            const auth = { Authorization: 'Bearer ' + token };
-            if (file.size <= 4 * 1024 * 1024) {
-                const r = await fetch(base + '/content?@microsoft.graph.conflictBehavior=rename', { method: 'PUT', headers: { ...auth, 'Content-Type': file.type || 'application/octet-stream' }, body: file });
-                if (!r.ok) throw new Error('Unggah gagal (kode ' + r.status + ')');
-                if (onProgress) onProgress(100);
-                return await r.json();
-            }
-            const s = await fetch(base + '/createUploadSession', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ item: { '@microsoft.graph.conflictBehavior': 'rename' } }) });
-            if (!s.ok) throw new Error('Sesi unggah gagal dibuat (kode ' + s.status + ')');
-            const { uploadUrl } = await s.json();
-            const CHUNK = 327680 * 10;
-            let start = 0, last = null;
-            while (start < file.size) {
-                const end = Math.min(start + CHUNK, file.size);
-                const r = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Range': 'bytes ' + start + '-' + (end - 1) + '/' + file.size }, body: file.slice(start, end) });
-                if (!r.ok && r.status !== 202) throw new Error('Unggah gagal di tengah jalan (kode ' + r.status + ')');
-                last = r; start = end;
-                if (onProgress) onProgress(Math.round(end / file.size * 100));
-            }
-            return await last.json();
-        }
-
-        const fileStore = new Map(); // id dokumen -> File (disimpan di memori browser)
-        const triggerDownload = file => {
-            const url = URL.createObjectURL(file);
-            const a = document.createElement('a');
-            a.href = url; a.download = file.name;
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-        };
-        const formatSize = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
-
+        
         document.addEventListener('alpine:init', () => {
             Alpine.data('documentControlApp', () => ({
                 activeModule: 0,
@@ -801,13 +744,14 @@
                 loginBusy: false,
                 showDetailModal: false,
                 detailDoc: null,
-                detailUrl: '',
-                detailIsPdf: false,
                 searchQuery: '',
                 selectedFilterIso: '',
                 showUploadModal: false,
                 showInfoModal: false,
                 showReviewModal: false,
+                showApprovalModal: false,
+                approvalDoc: null,
+                approvalForm: { result: '', approver: '', note: '' },
                 showEditModal: false,
                 editDoc: null,
                 editForm: { moduleId: 1, code: '', title: '', version: '', iso: [], status: 'Approved', note: '', spUrl: '' },
@@ -817,9 +761,6 @@
                 reviewForm: { result: '', reviewer: '', note: '' },
                 
                 spFolderUrl: SHAREPOINT_FOLDER_URL,
-                spAuto: !!(MS_GRAPH.clientId && MS_GRAPH.tenantId),
-                spBusy: false,
-                spProgress: 0,
                 newDoc: {
                     spUrl: '',
                     moduleId: 1,
@@ -841,7 +782,8 @@
                     { id: 9, name: '9. MANUAL MUTU K3L', icon: 'book-open' },
                     { id: 10, name: '10. SERTIFIKAT TRAINING AW DAN IA', icon: 'graduation-cap' },
                     { id: 11, name: '11. DOKUMEN DEPARTEMEN - SITE', icon: 'hard-hat' },
-                    { id: 12, name: '12. DOKUMEN DEPARTEMEN - HO', icon: 'building' }
+                    { id: 12, name: '12. DOKUMEN DEPARTEMEN - HO', icon: 'building' },
+                    { id: 13, name: '13. TEMUAN AUDIT ISO', icon: 'search-check' }
                 ],
 
                 documents: [
@@ -874,7 +816,6 @@
                 get isAdmin() { return !!this.user && this.user.role === 'admin'; },
                 get canOpenSp() { return this.isAdmin || VIEWER_CAN_OPEN_SHAREPOINT; },
                 safeUrl(u) { return /^https:\/\//i.test(u || '') ? u : '#'; },
-                get canDownload() { return this.isAdmin || VIEWER_CAN_DOWNLOAD; },
 
                 async login() {
                     this.loginBusy = true;
@@ -899,7 +840,7 @@
                 logout() {
                     this.user = null;
                     this.entry = null;
-                    this.showUploadModal = this.showReviewModal = this.showInfoModal = this.showEditModal = false;
+                    this.showUploadModal = this.showReviewModal = this.showInfoModal = this.showEditModal = this.showApprovalModal = false;
                     this.closeDetail();
                     try { sessionStorage.removeItem('ebl_user'); } catch (e) {}
                 },
@@ -923,46 +864,48 @@
                     return this.activeModule === 0 ? { id: 0, name: 'Semua Dokumen' } : (this.modules.find(m => m.id === this.activeModule) || {});
                 },
 
-                async submitNewDocument() {
-                    if(!this.isAdmin || !this.newDoc.code || !this.newDoc.title) return;
-                    const file = this.$refs.fileInput.files[0] || null;
-                    let spUrlNew = (this.newDoc.spUrl || '').trim();
-                    if (spUrlNew && !/^https:\/\//i.test(spUrlNew)) { alert('Link SharePoint harus diawali https://'); return; }
-                    if (this.spAuto) {
-                        if (!file) { alert('Pilih file dokumen yang akan diunggah ke SharePoint.'); return; }
-                        this.spBusy = true; this.spProgress = 0;
-                        try {
-                            const name = spSafe(this.newDoc.code) + '_' + spSafe(this.newDoc.version) + spExt(file.name);
-                            const item = await uploadToSharePoint(file, spSafe(this.folderName(parseInt(this.newDoc.moduleId))) + '/' + name, p => { this.spProgress = p; });
-                            spUrlNew = item.webUrl;
-                        } catch (e) {
-                            alert('Gagal mengunggah ke SharePoint: ' + e.message);
-                            return;
-                        } finally { this.spBusy = false; }
-                    }
-                    const id = Date.now();
+                submitNewDocument() {
+                    if (!this.isAdmin || !this.newDoc.code || !this.newDoc.title) return;
+                    const spUrlNew = (this.newDoc.spUrl || '').trim();
+                    if (!/^https:\/\//i.test(spUrlNew)) { alert('Tempel link SharePoint dokumen (harus diawali https://).'); return; }
+                    const today = new Date().toISOString().split('T')[0];
                     this.documents.unshift({
-                        id: id,
+                        id: Date.now(),
                         moduleId: parseInt(this.newDoc.moduleId),
                         code: this.newDoc.code,
                         title: this.newDoc.title,
                         iso: [...this.newDoc.iso],
                         version: this.newDoc.version,
                         status: 'In Review',
-                        author: 'Document Controller',
-                        date: new Date().toISOString().split('T')[0],
-                        fileName: file ? file.name : '',
-                        fileSize: file ? formatSize(file.size) : '',
+                        author: this.user.name,
+                        date: today,
                         spUrl: spUrlNew,
                         rev: 0,
-                        history: [{ rev: 0, spUrl: spUrlNew, version: this.newDoc.version, date: new Date().toISOString().split('T')[0], by: this.user.name, note: 'Dokumen pertama diunggah', changes: [], fileName: file ? file.name : '', fileSize: file ? formatSize(file.size) : '' }]
+                        history: [{ rev: 0, spUrl: spUrlNew, version: this.newDoc.version, date: today, by: this.user.name, note: 'Dokumen pertama didaftarkan', changes: [] }]
                     });
-                    if (file) { fileStore.set(id, file); fileStore.set(id + '#0', file); }
-                    this.$refs.fileInput.value = '';
                     this.showUploadModal = false;
                     this.newDoc.code = '';
                     this.newDoc.title = '';
                     this.newDoc.spUrl = '';
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+
+                openApproval(doc) {
+                    if (!this.isAdmin) return;
+                    this.approvalDoc = doc;
+                    this.approvalForm = { result: (doc.status === 'Approved' || doc.status === 'Tidak Approved') ? doc.status : '', approver: doc.approver || this.user.name, note: doc.approvalNote || '' };
+                    this.showApprovalModal = true;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+
+                submitApproval() {
+                    if (!this.isAdmin || !this.approvalDoc || !this.approvalForm.result) return;
+                    const d = this.approvalDoc;
+                    d.status = this.approvalForm.result;
+                    d.approver = this.approvalForm.approver;
+                    d.approvalNote = this.approvalForm.note;
+                    d.approvalDate = new Date().toISOString().split('T')[0];
+                    this.showApprovalModal = false;
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
@@ -989,30 +932,23 @@
                     return [...h].sort((a, b) => b.rev - a.rev);
                 },
 
-                hasRevFile(doc, h) { return fileStore.has(doc.id + '#' + h.rev); },
-
-                downloadRevision(doc, h) {
-                    if (!this.isAdmin) return;
-                    const f = fileStore.get(doc.id + '#' + h.rev);
-                    if (f) triggerDownload(f);
-                },
-
                 openEdit(doc) {
                     if (!this.isAdmin) return;
                     this.editDoc = doc;
                     this.editForm = { moduleId: doc.moduleId, code: doc.code, title: doc.title, version: doc.version, iso: [...doc.iso], status: doc.status, note: '', spUrl: doc.spUrl || '' };
                     this.editError = '';
                     this.showEditModal = true;
-                    this.$nextTick(() => { if (this.$refs.editFile) this.$refs.editFile.value = ''; lucide.createIcons(); });
+                    this.$nextTick(() => { lucide.createIcons(); });
                 },
 
-                async submitEdit() {
+                submitEdit() {
                     if (!this.isAdmin || !this.editDoc) return;
                     const d = this.editDoc, f = this.editForm;
-                    const file = this.$refs.editFile.files[0] || null;
-                    const code = f.code.trim(), title = f.title.trim(), version = f.version.trim();
+                    const code = f.code.trim(), title = f.title.trim(), version = f.version.trim(), spUrl = (f.spUrl || '').trim();
                     const iso = [...f.iso].sort().join(', ');
                     const moduleId = parseInt(f.moduleId);
+                    if (!/^https:\/\//i.test(spUrl)) { this.editError = 'Link SharePoint wajib diisi dan diawali https://'; return; }
+                    const spChanged = spUrl !== (d.spUrl || '');
                     const changes = [];
                     if (code !== d.code) changes.push('Nomor dokumen: ' + d.code + ' menjadi ' + code);
                     if (title !== d.title) changes.push('Judul dokumen diubah');
@@ -1020,40 +956,17 @@
                     if (iso !== [...d.iso].sort().join(', ')) changes.push('Cakupan standar menjadi ISO ' + (iso || '-'));
                     if (f.status !== d.status) changes.push('Status: ' + d.status + ' menjadi ' + f.status);
                     if (moduleId !== d.moduleId) changes.push('Dipindahkan ke folder ' + this.folderName(moduleId));
-                    if (file) changes.push('File diganti: ' + file.name);
-                    let spUrl = (f.spUrl || '').trim();
-                    if (spUrl && !/^https:\/\//i.test(spUrl)) { this.editError = 'Link SharePoint harus diawali https://'; return; }
-                    let spChanged = spUrl !== (d.spUrl || '');
-                    if (spChanged) changes.push('Link file SharePoint diperbarui');
-                    if (!changes.length) { this.editError = 'Belum ada perubahan. Ubah data atau ganti file terlebih dahulu.'; return; }
+                    if (spChanged) changes.push('Link dokumen SharePoint diperbarui');
+                    if (!changes.length) { this.editError = 'Belum ada perubahan. Ubah data atau link dokumen terlebih dahulu.'; return; }
                     if (!f.note.trim()) { this.editError = 'Isi catatan perubahan agar revisi tercatat.'; return; }
-                    if (this.spAuto && file) {
-                        this.spBusy = true; this.spProgress = 0;
-                        try {
-                            const name = spSafe(code) + '_' + spSafe(version) + '_rev' + ((d.rev || 0) + 1) + spExt(file.name);
-                            const item = await uploadToSharePoint(file, spSafe(this.folderName(moduleId)) + '/' + name, p => { this.spProgress = p; });
-                            spUrl = item.webUrl;
-                            if (spUrl !== (d.spUrl || '') && !spChanged) { spChanged = true; changes.push('Link file SharePoint diperbarui'); }
-                        } catch (e) {
-                            this.editError = 'Gagal mengunggah ke SharePoint: ' + e.message;
-                            return;
-                        } finally { this.spBusy = false; }
-                    }
 
                     // simpan kondisi awal sebagai Revisi ke-0 sebelum diubah
-                    if (!d.history) d.history = [{ rev: 0, version: d.version, date: d.date, by: d.author, note: 'Dokumen awal', changes: [], fileName: d.fileName || '', fileSize: d.fileSize || '', spUrl: d.spUrl || '' }];
-                    if (!fileStore.has(d.id + '#0') && fileStore.has(d.id)) fileStore.set(d.id + '#0', fileStore.get(d.id));
+                    if (!d.history) d.history = [{ rev: 0, version: d.version, date: d.date, by: d.author, note: 'Dokumen awal', changes: [], spUrl: d.spUrl || '' }];
 
                     const today = new Date().toISOString().split('T')[0];
                     d.rev = (d.rev || 0) + 1;
                     Object.assign(d, { code, title, version, iso: [...f.iso], status: f.status, moduleId, updatedAt: today, spUrl });
-                    if (file) {
-                        d.fileName = file.name;
-                        d.fileSize = formatSize(file.size);
-                        fileStore.set(d.id, file);
-                        fileStore.set(d.id + '#' + d.rev, file);
-                    }
-                    d.history.push({ rev: d.rev, spUrl: spChanged ? spUrl : '', version, date: today, by: this.user.name, note: f.note.trim(), changes, fileName: file ? file.name : '', fileSize: file ? formatSize(file.size) : '' });
+                    d.history.push({ rev: d.rev, spUrl: spChanged ? spUrl : '', version, date: today, by: this.user.name, note: f.note.trim(), changes });
                     this.showEditModal = false;
                     this.editDoc = null;
                     this.$nextTick(() => { lucide.createIcons(); });
@@ -1061,46 +974,18 @@
 
                 deleteDoc(id) {
                     if(!this.isAdmin) return;
-                    [...fileStore.keys()].forEach(k => { if (String(k).startsWith(id + '#')) fileStore.delete(k); });
                     if(confirm('Apakah Anda yakin ingin menghapus arsip dokumen PT Energi Batubara Lestari ini?')) {
-                        fileStore.delete(id);
                         this.documents = this.documents.filter(d => d.id !== id);
                     }
                 },
 
-                downloadDocument(doc) {
-                    if(!this.canDownload) return;
-                    const file = fileStore.get(doc.id);
-                    if (!file) {
-                        alert('Dokumen ' + doc.code + ' belum memiliki file terlampir.\nUnggah dokumen lewat tombol "Unggah Dokumen Baru" agar bisa diunduh.');
-                        return;
-                    }
-                    const url = URL.createObjectURL(file);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = file.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                },
-
                 viewDetail(doc) {
-                    this.closeDetail();
                     this.detailDoc = doc;
-                    const f = fileStore.get(doc.id);
-                    if (f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name))) {
-                        this.detailUrl = URL.createObjectURL(f);
-                        this.detailIsPdf = true;
-                    }
                     this.showDetailModal = true;
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
                 closeDetail() {
-                    if (this.detailUrl) URL.revokeObjectURL(this.detailUrl);
-                    this.detailUrl = '';
-                    this.detailIsPdf = false;
                     this.detailDoc = null;
                     this.showDetailModal = false;
                 },
@@ -1110,7 +995,7 @@
                         const raw = localStorage.getItem('ebl_docs_v1');
                         if (raw) {
                             const saved = JSON.parse(raw);
-                            if (Array.isArray(saved)) this.documents = saved.map(d => (d.fileName && !fileStore.has(d.id)) ? { ...d, fileName: '', fileSize: '' } : d);
+                            if (Array.isArray(saved)) this.documents = saved;
                         }
                     } catch (e) {}
                     this.$watch('documents', v => { try { localStorage.setItem('ebl_docs_v1', JSON.stringify(v)); } catch (e) {} });
