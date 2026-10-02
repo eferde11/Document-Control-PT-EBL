@@ -13,14 +13,17 @@ Website ini **tidak menyimpan file dokumen**. File asli disimpan di **SharePoint
 - Dua pintu masuk: **Lihat dokumen** (Viewer, tanpa login) dan **Masuk sebagai User** (Document Controller, dengan login).
 
 **Daftar dokumen**
-- 13 folder dokumen, termasuk **Temuan Audit ISO**, dan menu **SEMUA DOKUMEN**.
+- 13 folder dokumen dan menu **SEMUA DOKUMEN**.
+- Folder **Dokumen Departemen - Site** dan **- HO** berisi folder per departemen, dan tiap departemen punya 7 kategori (lihat [Struktur folder departemen](#struktur-folder-departemen)).
+- Folder **Temuan Audit ISO** berisi register temuan untuk **Audit Internal** dan **Audit Eksternal** (lihat [Temuan audit ISO](#temuan-audit-iso)).
 - Pencarian, filter standar ISO, dan filter hasil review.
 - Ringkasan per folder dan progres review.
 - Tombol **Buka** membuka dokumen langsung di SharePoint.
 - Detail dokumen berisi status, hasil review, hasil approval, dan riwayat revisi.
 
 **Khusus User (Document Controller)**
-- **Tambah dokumen** dengan menempel link SharePoint.
+- **Tambah dokumen** dengan menempel link SharePoint. Untuk folder departemen, pilih departemen dan kategorinya.
+- **Temuan audit:** tambah, edit, hapus, dan review temuan, termasuk bukti perbaikan.
 - **Approval:** pilih **Approved** atau **Tidak Approved**, lengkap dengan nama approver dan catatan. Status dokumen ikut berubah.
 - **Review:** hasil *Perlu Update* atau *Tidak Perlu Update*, nama reviewer, dan catatan.
 - **Edit dokumen** dan catat sebagai **Revisi ke-N** dengan catatan perubahan. Link SharePoint tiap revisi tersimpan di riwayat.
@@ -46,6 +49,42 @@ Website ini **tidak menyimpan file dokumen**. File asli disimpan di **SharePoint
 11. Dokumen Departemen - Site
 12. Dokumen Departemen - HO
 13. Temuan Audit ISO
+
+## Struktur folder departemen
+
+Di folder **11. Dokumen Departemen - Site** dan **12. Dokumen Departemen - HO**, dokumen dikelompokkan per departemen, lalu per kategori.
+
+**Departemen Site (11):** KTT, Gudang Handak, SHE, Technical Service & Planning, Mining Operation Production, Coal Crushing Plant & Hauling, Quality Control, Revegetasi & Rehabilitasi, Government Relation & CSR, Human Capital & Administration, Legal Compliance & General Handling.
+
+**Departemen HO (12):** Internal Audit, CPOC, FAT, Engineering & Operation, Marketing.
+
+**Kategori di setiap departemen:**
+
+1. KPI dan Bukti Pencapaian
+2. Job Description
+3. IBPR IADL
+4. SOP
+5. Form
+6. IK
+7. STD
+
+Cara memakainya: buka folder, pilih departemen dari kartu yang tampil, lalu pilih kategori lewat tab di atas tabel. Kolom pencarian mencari di semua departemen sekaligus. Dokumen lama yang belum punya departemen tampil di kartu **Belum dikategorikan**. Admin menentukan departemennya lewat tombol **Edit**.
+
+## Temuan audit ISO
+
+Folder **13. Temuan Audit ISO** berisi dua tab, **Audit Internal** dan **Audit Eksternal**. Setiap tab menampilkan tabel dengan kolom:
+
+| Kolom | Isi |
+|---|---|
+| No. | Nomor urut otomatis per jenis audit. Nomor temuan yang dihapus tidak dipakai ulang. |
+| Temuan | Uraian temuan. |
+| Departement | Departemen Site atau HO. |
+| Status | **OFI**, **Major**, atau **Minor**. |
+| Due date | Batas waktu perbaikan. Temuan yang lewat due date dan belum *Sesuai* ditandai **Terlambat**. |
+| Bukti Perbaikan | Tombol **Lihat bukti** (link SharePoint) dan keterangan singkat. |
+| Hasil Review | **Belum Direview**, **Sesuai**, atau **Belum Sesuai**, lengkap dengan reviewer, tanggal, dan catatan. |
+
+Ringkasan di atas tabel menampilkan jumlah temuan Major, Minor, dan OFI, serta progres temuan yang sudah *Sesuai*. Tabel bisa difilter berdasarkan status dan departemen. Hanya User yang bisa menambah, mengedit, menghapus, dan mereview temuan. Viewer hanya melihat dan membuka link bukti.
 
 ## Status dokumen
 
@@ -73,7 +112,8 @@ Username akun User: `docoebl` (tidak membedakan huruf besar dan kecil). Kata san
 4. Klik **Approval** untuk menetapkan **Approved** atau **Tidak Approved**.
 5. Klik **Review** untuk menandai *Perlu Update* atau *Tidak Perlu Update*.
 6. Saat dokumen berubah, unggah file revisi ke SharePoint, klik ikon pensil, tempel link terbaru, isi catatan, lalu **Simpan Revisi**. Aplikasi mencatatnya sebagai Revisi ke-1, ke-2, dan seterusnya.
-7. Temuan audit ISO didaftarkan di folder **13. Temuan Audit ISO** dengan cara yang sama.
+7. Untuk folder departemen, pilih departemen dan kategori saat menambah dokumen.
+8. Temuan audit dicatat di folder **13. Temuan Audit ISO** lewat tombol **Tambah Temuan**. Setelah perbaikan dilakukan, unggah bukti ke SharePoint, tempel linknya di temuan, lalu gunakan tombol **Review** untuk menetapkan *Sesuai* atau *Belum Sesuai*.
 
 ## Teknologi
 
@@ -128,8 +168,8 @@ Gunakan `role: 'admin'` untuk akun User.
 ## Penyimpanan data
 
 - **File dokumen** disimpan di SharePoint, bukan di website. Mengganti `index.html` tidak berpengaruh pada file.
-- **Daftar dokumen** (nomor, judul, versi, status, approval, review, riwayat revisi, link SharePoint) disimpan di `localStorage` browser. Data tetap ada setelah refresh dan setelah `index.html` diganti, tetapi **hanya di browser dan komputer yang sama**. Komputer lain tidak melihat dokumen yang ditambahkan.
-- Dokumen contoh bawaan hanya dimuat sekali saat pertama dibuka. Dokumen contoh belum punya link SharePoint, jadi tombol **Buka** muncul setelah admin menambahkan link lewat **Edit**.
+- **Daftar dokumen dan temuan audit** (nomor, judul, versi, status, approval, review, riwayat revisi, link SharePoint, departemen, kategori) disimpan di `localStorage` browser. Data tetap ada setelah refresh dan setelah `index.html` diganti, tetapi **hanya di browser dan komputer yang sama**. Komputer lain tidak melihat dokumen yang ditambahkan.
+- Dokumen contoh bawaan hanya dimuat sekali saat pertama dibuka. Dokumen contoh belum punya link SharePoint, jadi tombol **Buka** muncul setelah admin menambahkan link lewat **Edit**. Temuan audit tidak punya data contoh.
 - Membersihkan data situs di browser akan menghapus daftar dokumen.
 
 ## Keamanan
