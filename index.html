@@ -194,7 +194,7 @@
 
                 <!-- Navigation Folder Items -->
                 <nav class="mt-3 px-3 space-y-1 overflow-y-auto max-h-[calc(100vh-150px)] text-xs custom-scrollbar">
-                    <button @click="activeModule = 0; selectedFilterIso = ''; selectedFilterReview = ''"
+                    <button @click="goModule(0)"
                             :class="activeModule === 0 ? 'nav-active' : 'nav-idle'"
                             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors font-medium">
                         <i data-lucide="layers" class="w-4 h-4 shrink-0"></i>
@@ -205,12 +205,12 @@
                     
                     <template x-for="module in modules" :key="module.id">
                         <button 
-                            @click="activeModule = module.id; selectedFilterIso = ''; selectedFilterReview = ''"
+                            @click="goModule(module.id)"
                             :class="activeModule === module.id ? 'nav-active' : 'nav-idle'"
                             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors font-medium">
                             <i :data-lucide="module.icon" class="w-4 h-4 shrink-0 transition-transform "></i>
                             <span class="truncate leading-tight flex-1" x-text="module.name"></span>
-                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/10" x-text="documents.filter(d => d.moduleId === module.id).length"></span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/10" x-text="navCount(module.id)"></span>
                         </button>
                     </template>
                 </nav>
@@ -252,8 +252,8 @@
                 <div class="flex items-center gap-3">
                     <a x-show="isAdmin" :href="spFolderUrl" target="_blank" rel="noopener noreferrer" class="border border-slate-300 hover:border-sky-600 hover:text-sky-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="folder-open" class="w-4 h-4"></i> Folder SharePoint</a>
                     <span x-show="!isAdmin" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Mode lihat saja</span>
-                    <button x-show="isAdmin" @click="showUploadModal = true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
-                        <i data-lucide="file-plus" class="w-4 h-4"></i> Tambah Dokumen
+                    <button x-show="isAdmin" @click="isFindings ? openFinding() : openAdd()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
+                        <i data-lucide="file-plus" class="w-4 h-4"></i> <span x-text="isFindings ? 'Tambah Temuan' : 'Tambah Dokumen'"></span>
                     </button>
                 </div>
             </header>
@@ -261,8 +261,143 @@
             <!-- Dashboard Content Body -->
             <div class="p-4 md:p-8 space-y-5">
 
+                <!-- Navigasi Departemen (folder 11 dan 12) -->
+                <section x-show="isDeptFolder" x-cloak class="space-y-4">
+                    <div x-show="showDeptGrid">
+                        <p class="text-sm text-slate-500 mb-3">Pilih departemen untuk melihat dokumennya.</p>
+                        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                            <template x-for="dp in currentDepts" :key="dp">
+                                <button @click="activeDept = dp; activeType = ''" class="text-left bg-white border border-slate-200 hover:border-emerald-600 rounded-lg p-4 transition-colors flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0"><i data-lucide="folder" class="w-5 h-5"></i></div>
+                                    <div class="min-w-0">
+                                        <p class="font-display font-bold text-slate-900 leading-snug" x-text="dp"></p>
+                                        <p class="text-xs text-slate-500" x-text="deptCount(dp) + ' dokumen'"></p>
+                                    </div>
+                                </button>
+                            </template>
+                            <button x-show="uncatCount() > 0" @click="activeDept = '__none'; activeType = ''" class="text-left bg-white border border-dashed border-slate-300 hover:border-emerald-600 rounded-lg p-4 transition-colors flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-md bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><i data-lucide="folder-question" class="w-5 h-5"></i></div>
+                                <div class="min-w-0">
+                                    <p class="font-display font-bold text-slate-700 leading-snug">Belum dikategorikan</p>
+                                    <p class="text-xs text-slate-500" x-text="uncatCount() + ' dokumen, tentukan departemennya lewat Edit'"></p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    <div x-show="activeDept" class="space-y-3">
+                        <div class="flex items-center gap-2 text-sm flex-wrap">
+                            <button @click="activeDept = ''; activeType = ''; searchQuery = ''" class="text-emerald-700 font-semibold hover:underline flex items-center gap-1"><i data-lucide="chevron-left" class="w-4 h-4"></i> Semua Departemen</button>
+                            <span class="text-slate-300">/</span>
+                            <span class="font-display font-bold text-slate-900" x-text="activeDept === '__none' ? 'Belum dikategorikan' : activeDept"></span>
+                        </div>
+                        <div class="flex gap-2 overflow-x-auto pb-1">
+                            <button @click="activeType = ''" :class="activeType === '' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-600'" class="px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors">Semua <span class="opacity-70" x-text="typeCount('')"></span></button>
+                            <template x-for="t in docTypes" :key="t">
+                                <button @click="activeType = t" :class="activeType === t ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-600'" class="px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors"><span x-text="t"></span> <span class="opacity-70" x-text="typeCount(t)"></span></button>
+                            </template>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Temuan Audit ISO (folder 13) -->
+                <section x-show="isFindings" x-cloak class="space-y-5">
+                    <div class="flex gap-2 flex-wrap">
+                        <button @click="auditTab = 'internal'" :class="auditTab === 'internal' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-600'" class="px-4 py-2.5 rounded-md border text-sm font-semibold transition-colors flex items-center gap-2">
+                            <i data-lucide="clipboard-list" class="w-4 h-4"></i> Audit Internal <span class="text-[11px] px-1.5 py-0.5 rounded bg-black/10" x-text="findings.filter(x => x.type === 'internal').length"></span>
+                        </button>
+                        <button @click="auditTab = 'eksternal'" :class="auditTab === 'eksternal' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-600'" class="px-4 py-2.5 rounded-md border text-sm font-semibold transition-colors flex items-center gap-2">
+                            <i data-lucide="landmark" class="w-4 h-4"></i> Audit Eksternal <span class="text-[11px] px-1.5 py-0.5 rounded bg-black/10" x-text="findings.filter(x => x.type === 'eksternal').length"></span>
+                        </button>
+                    </div>
+                    <section class="bg-white border border-slate-200 rounded-lg">
+                        <div class="grid grid-cols-2 md:grid-cols-4 md:divide-x divide-slate-200">
+                            <div class="px-5 py-4"><p class="text-xs text-slate-500">Total temuan</p><p class="font-display text-3xl font-bold text-slate-900 mt-1" x-text="findingStats.total"></p></div>
+                            <div class="px-5 py-4"><p class="text-xs text-slate-500">Major</p><p class="font-display text-3xl font-bold text-rose-600 mt-1" x-text="findingStats.major"></p></div>
+                            <div class="px-5 py-4"><p class="text-xs text-slate-500">Minor</p><p class="font-display text-3xl font-bold text-amber-600 mt-1" x-text="findingStats.minor"></p></div>
+                            <div class="px-5 py-4"><p class="text-xs text-slate-500">OFI</p><p class="font-display text-3xl font-bold text-sky-600 mt-1" x-text="findingStats.ofi"></p></div>
+                        </div>
+                        <div class="border-t border-slate-200 px-5 py-3 flex items-center gap-4 text-xs text-slate-500">
+                            <span class="whitespace-nowrap" x-text="findingStats.closed + ' dari ' + findingStats.total + ' temuan sudah sesuai'"></span>
+                            <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-teal-500 transition-all duration-300" :style="'width:' + (findingStats.total ? findingStats.closed / findingStats.total * 100 : 0) + '%'"></div></div>
+                        </div>
+                    </section>
+                    <div class="bg-white p-3 rounded-lg border border-slate-200 flex flex-col md:flex-row gap-3 items-center">
+                        <div class="flex-1 w-full relative">
+                            <input type="text" x-model="findingFilter.q" placeholder="Cari temuan..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5"></i>
+                        </div>
+                        <div class="flex items-center gap-2 w-full md:w-auto">
+                            <select x-model="findingFilter.status" class="border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                                <option value="">Semua Status</option><option value="Major">Major</option><option value="Minor">Minor</option><option value="OFI">OFI</option>
+                            </select>
+                            <select x-model="findingFilter.dept" class="border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white max-w-[200px]">
+                                <option value="">Semua Departemen</option>
+                                <optgroup label="Site"><template x-for="dp in deptSite" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
+                                <optgroup label="HO"><template x-for="dp in deptHo" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="register w-full text-left text-[13px]">
+                                <thead class="bg-slate-100 border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-4 w-12">No.</th>
+                                        <th class="p-4">Temuan</th>
+                                        <th class="p-4">Departement</th>
+                                        <th class="p-4">Status</th>
+                                        <th class="p-4">Due date</th>
+                                        <th class="p-4">Bukti Perbaikan</th>
+                                        <th class="p-4">Hasil Review</th>
+                                        <th class="p-4 text-right" x-show="isAdmin">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="x in findingsShown" :key="x.id">
+                                        <tr class="align-top">
+                                            <td class="p-4 font-mono font-semibold text-slate-500" x-text="x.no"></td>
+                                            <td class="p-4"><p class="text-slate-900 leading-snug max-w-md whitespace-pre-line" x-text="x.temuan"></p></td>
+                                            <td class="p-4 text-slate-700" x-text="x.dept"></td>
+                                            <td class="p-4 whitespace-nowrap">
+                                                <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold" :class="{ 'bg-rose-100 text-rose-700': x.status === 'Major', 'bg-amber-100 text-amber-700': x.status === 'Minor', 'bg-sky-100 text-sky-700': x.status === 'OFI' }" x-text="x.status"></span>
+                                            </td>
+                                            <td class="p-4 whitespace-nowrap">
+                                                <span :class="isOverdue(x) ? 'text-rose-600 font-semibold' : 'text-slate-700'" x-text="fmtDate(x.dueDate)"></span>
+                                                <span x-show="isOverdue(x)" class="block text-[10px] font-semibold text-rose-600">Terlambat</span>
+                                            </td>
+                                            <td class="p-4">
+                                                <a x-show="x.buktiUrl && canOpenSp" :href="safeUrl(x.buktiUrl)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Lihat bukti</a>
+                                                <span x-show="!x.buktiUrl" class="text-slate-400 text-xs">Belum ada bukti</span>
+                                                <p x-show="x.buktiNote" class="text-[11px] text-slate-500 mt-1 max-w-[220px]" x-text="x.buktiNote"></p>
+                                            </td>
+                                            <td class="p-4 whitespace-nowrap">
+                                                <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold" :class="{ 'bg-slate-100 text-slate-500': !x.reviewResult, 'bg-teal-100 text-teal-700': x.reviewResult === 'Sesuai', 'bg-orange-100 text-orange-700': x.reviewResult === 'Belum Sesuai' }" x-text="x.reviewResult || 'Belum Direview'"></span>
+                                                <p class="text-[10px] text-slate-400 mt-1" x-show="x.reviewDate" x-text="x.reviewDate + ' oleh ' + x.reviewer"></p>
+                                                <p class="text-[11px] text-slate-500 mt-1 max-w-[200px] whitespace-normal" x-show="x.reviewNote" x-text="x.reviewNote"></p>
+                                            </td>
+                                            <td class="p-4 text-right whitespace-nowrap" x-show="isAdmin">
+                                                <div class="flex items-center justify-end gap-1">
+                                                    <button @click="openFindingReview(x)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition"><i data-lucide="clipboard-check" class="w-4 h-4"></i> Review</button>
+                                                    <button @click="openFinding(x)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit temuan"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                                    <button @click="deleteFinding(x.id)" class="p-1.5 hover:bg-rose-100 rounded-lg text-rose-600 transition" title="Hapus temuan"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <tr x-show="findingsShown.length === 0">
+                                        <td colspan="8" class="p-12 text-center text-slate-400">
+                                            <p class="text-sm font-medium text-slate-600" x-text="'Belum ada temuan pada audit ' + (auditTab === 'internal' ? 'internal' : 'eksternal') + '.'"></p>
+                                            <p x-show="isAdmin" class="text-xs text-slate-400 mt-1">Gunakan tombol "Tambah Temuan" untuk mencatat temuan audit.</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Ringkasan Modul -->
-                <section class="bg-white border border-slate-200 rounded-lg">
+                <section x-show="!isFindings" class="bg-white border border-slate-200 rounded-lg">
                     <div class="grid grid-cols-2 md:grid-cols-4 md:divide-x divide-slate-200">
                         <div class="px-5 py-4">
                             <p class="text-xs text-slate-500">Dokumen di folder ini</p>
@@ -292,7 +427,7 @@
                 </section>
 
                 <!-- Search & Filters Toolbar -->
-                <div class="bg-white p-3 rounded-lg border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
+                <div x-show="!isFindings" class="bg-white p-3 rounded-lg border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
                     <div class="flex-1 w-full relative">
                         <input type="text" x-model="searchQuery" placeholder="Cari nomor dokumen, judul, atau kata kunci..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5"></i>
@@ -314,7 +449,7 @@
                 </div>
 
                 <!-- Document Records Table -->
-                <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                <div x-show="!isFindings && !showDeptGrid" class="bg-white rounded-lg border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="register w-full text-left text-[13px]">
                             <thead class="bg-slate-100 border-b border-slate-200">
@@ -335,6 +470,7 @@
                                         <td class="p-4">
                                             <p class="font-semibold text-slate-900 leading-snug max-w-md" x-text="doc.title"></p>
                                             <p x-show="activeModule === 0" class="text-[11px] font-semibold text-emerald-700 mt-0.5" x-text="folderName(doc.moduleId)"></p>
+                                            <p x-show="doc.dept" class="text-[11px] font-semibold text-emerald-700 mt-0.5" x-text="doc.dept + ' · ' + (doc.docType || '-')"></p>
                                             <p class="text-[11px] text-slate-500 mt-0.5" x-text="'Didaftarkan oleh: ' + doc.author + ' | Tanggal: ' + doc.date + (doc.updatedAt ? ' | Diperbarui: ' + doc.updatedAt : '')"></p>
                                             </td>
                                         <td class="p-4 whitespace-nowrap">
@@ -438,10 +574,26 @@
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Pilih Modul Folder ISO</label>
                     <select x-model="newDoc.moduleId" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
-                        <template x-for="mod in modules" :key="mod.id">
+                        <template x-for="mod in docModules" :key="mod.id">
                             <option :value="mod.id" x-text="mod.name"></option>
                         </template>
                     </select>
+                </div>
+                <div x-show="isDeptId(newDoc.moduleId)" class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Departemen</label>
+                        <select x-model="newDoc.dept" :required="isDeptId(newDoc.moduleId)" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="">Pilih departemen</option>
+                            <template x-for="dp in deptsOf(newDoc.moduleId)" :key="dp"><option :value="dp" x-text="dp"></option></template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Kategori</label>
+                        <select x-model="newDoc.docType" :required="isDeptId(newDoc.moduleId)" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="">Pilih kategori</option>
+                            <template x-for="t in docTypes" :key="t"><option :value="t" x-text="t"></option></template>
+                        </select>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -598,8 +750,24 @@
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Folder</label>
                     <select x-model="editForm.moduleId" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        <template x-for="mod in modules" :key="mod.id"><option :value="mod.id" x-text="mod.name"></option></template>
+                        <template x-for="mod in docModules" :key="mod.id"><option :value="mod.id" x-text="mod.name"></option></template>
                     </select>
+                </div>
+                <div x-show="isDeptId(editForm.moduleId)" class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Departemen</label>
+                        <select x-model="editForm.dept" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="">Pilih departemen</option>
+                            <template x-for="dp in deptsOf(editForm.moduleId)" :key="dp"><option :value="dp" x-text="dp"></option></template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Kategori</label>
+                        <select x-model="editForm.docType" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="">Pilih kategori</option>
+                            <template x-for="t in docTypes" :key="t"><option :value="t" x-text="t"></option></template>
+                        </select>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -645,6 +813,102 @@
                 <div class="pt-4 flex justify-end gap-2 border-t">
                     <button type="button" @click="showEditModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
                     <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Revisi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Temuan Audit -->
+    <div x-show="showFindingModal" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="modal-card bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[92vh] overflow-y-auto border">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500 sticky top-0 z-10">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i data-lucide="search-check" class="w-4 h-4 text-emerald-400"></i> <span x-text="findingEditId ? 'Edit Temuan Audit' : 'Tambah Temuan Audit'"></span></h3>
+                <button @click="showFindingModal = false" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form @submit.prevent="submitFinding" class="p-6 space-y-4 text-xs">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Jenis Audit</label>
+                        <select x-model="findingForm.type" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="internal">Audit Internal</option><option value="eksternal">Audit Eksternal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Status</label>
+                        <select x-model="findingForm.status" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="Major">Major</option><option value="Minor">Minor</option><option value="OFI">OFI</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Temuan</label>
+                    <textarea x-model="findingForm.temuan" rows="4" required placeholder="Uraikan temuan audit..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Departemen</label>
+                        <select x-model="findingForm.dept" required class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="">Pilih departemen</option>
+                            <optgroup label="Site"><template x-for="dp in deptSite" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
+                            <optgroup label="HO"><template x-for="dp in deptHo" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Due date</label>
+                        <input type="date" x-model="findingForm.dueDate" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Link Bukti Perbaikan di SharePoint (opsional)</label>
+                    <input type="url" x-model="findingForm.buktiUrl" placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Keterangan Bukti (opsional)</label>
+                    <textarea x-model="findingForm.buktiNote" rows="2" placeholder="Contoh: Foto pemasangan rambu dan daftar hadir briefing" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                </div>
+                <p x-show="findingError" x-text="findingError" class="text-rose-600 font-medium"></p>
+                <div class="pt-4 flex justify-end gap-2 border-t">
+                    <button type="button" @click="showFindingModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Temuan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Review Temuan -->
+    <div x-show="showFindingReview" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="modal-card bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i data-lucide="clipboard-check" class="w-4 h-4 text-emerald-400"></i> Review Bukti Perbaikan</h3>
+                <button @click="showFindingReview = false" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form @submit.prevent="submitFindingReview" class="p-6 space-y-4 text-xs">
+                <div class="p-3 bg-slate-50 rounded-lg border">
+                    <p class="font-semibold text-slate-700" x-text="findingReviewTarget ? 'Temuan No. ' + findingReviewTarget.no + ' · ' + findingReviewTarget.dept : ''"></p>
+                    <p class="text-slate-600 mt-0.5 line-clamp-3" x-text="findingReviewTarget ? findingReviewTarget.temuan : ''"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Hasil Review</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center gap-2 border rounded-lg p-3 cursor-pointer" :class="findingReviewForm.result === 'Sesuai' ? 'border-teal-400 bg-teal-50' : ''">
+                            <input type="radio" value="Sesuai" x-model="findingReviewForm.result" class="text-teal-600"><span class="font-medium text-slate-700">Sesuai</span>
+                        </label>
+                        <label class="flex items-center gap-2 border rounded-lg p-3 cursor-pointer" :class="findingReviewForm.result === 'Belum Sesuai' ? 'border-orange-400 bg-orange-50' : ''">
+                            <input type="radio" value="Belum Sesuai" x-model="findingReviewForm.result" class="text-orange-600"><span class="font-medium text-slate-700">Belum Sesuai</span>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nama Reviewer</label>
+                    <input type="text" x-model="findingReviewForm.reviewer" required class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Catatan Review</label>
+                    <textarea x-model="findingReviewForm.note" rows="3" placeholder="Contoh: Bukti sudah lengkap / Lengkapi daftar hadir..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                </div>
+                <div class="pt-4 flex justify-end gap-2 border-t">
+                    <button type="button" @click="showFindingReview = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
+                    <button type="submit" :disabled="!findingReviewForm.result" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-semibold shadow-sm">Simpan Review</button>
                 </div>
             </form>
         </div>
@@ -726,6 +990,11 @@
         ];
         const SHAREPOINT_FOLDER_URL = 'https://hitdigitalid-my.sharepoint.com/:f:/g/personal/fani_damayanti_hasnurgroup_com/IgBr0caM1Ym0So0NpFrVRT-YAcGx49eJlsNFg1X3KG3DcUM?e=RljwIT'; // folder penyimpanan dokumen di SharePoint
         const VIEWER_CAN_OPEN_SHAREPOINT = true; // false = tombol "Buka di SharePoint" hanya untuk admin
+        const DEPT_SITE = ['KTT', 'Gudang Handak', 'SHE', 'Technical Service & Planning', 'Mining Operation Production', 'Coal Crushing Plant & Hauling', 'Quality Control', 'Revegetasi & Rehabilitasi', 'Government Relation & CSR', 'Human Capital & Administration', 'Legal Compliance & General Handling'];
+        const DEPT_HO = ['Internal Audit', 'CPOC', 'FAT', 'Engineering & Operation', 'Marketing'];
+        const DOC_TYPES = ['KPI dan Bukti Pencapaian', 'Job Description', 'IBPR IADL', 'SOP', 'Form', 'IK', 'STD'];
+        let uidSeq = 0;
+        const uid = () => Date.now() * 1000 + (uidSeq = (uidSeq + 1) % 1000);
         const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ebl:' + t)))].map(x => x.toString(16).padStart(2, '0')).join('');
 
         const LOGO_MARK = 'data:image/png;base64,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';
@@ -735,6 +1004,21 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('documentControlApp', () => ({
                 activeModule: 0,
+                activeDept: '',
+                activeType: '',
+                docTypes: DOC_TYPES,
+                deptSite: DEPT_SITE,
+                deptHo: DEPT_HO,
+                findings: [],
+                auditTab: 'internal',
+                findingFilter: { status: '', dept: '', q: '' },
+                showFindingModal: false,
+                findingEditId: null,
+                findingError: '',
+                findingForm: { type: 'internal', temuan: '', dept: '', status: 'Minor', dueDate: '', buktiUrl: '', buktiNote: '' },
+                showFindingReview: false,
+                findingReviewTarget: null,
+                findingReviewForm: { result: '', reviewer: '', note: '' },
                 user: null,
                 entry: null,
                 logoMark: LOGO_MARK,
@@ -754,7 +1038,7 @@
                 approvalForm: { result: '', approver: '', note: '' },
                 showEditModal: false,
                 editDoc: null,
-                editForm: { moduleId: 1, code: '', title: '', version: '', iso: [], status: 'Approved', note: '', spUrl: '' },
+                editForm: { moduleId: 1, code: '', title: '', version: '', iso: [], status: 'Approved', note: '', spUrl: '', dept: '', docType: '' },
                 editError: '',
                 selectedFilterReview: '',
                 reviewDoc: null,
@@ -767,7 +1051,9 @@
                     code: '',
                     title: '',
                     version: 'v1.0',
-                    iso: ['9001']
+                    iso: ['9001'],
+                    dept: '',
+                    docType: ''
                 },
 
                 modules: [
@@ -797,8 +1083,8 @@
                     { id: 8, moduleId: 8, code: 'ORG-EBL-STRUCT-01', title: 'Struktur Organisasi PT Energi Batubara Lestari dan Uraian Tugas', iso: ['9001'], version: 'v1.5', status: 'Approved', author: 'HR Department', date: '2026-01-05' },
                     { id: 9, moduleId: 9, code: 'MAN-EBL-QHSE-001', title: 'Manual Sistem Manajemen Terintegrasi ISO 9001, 14001, dan 45001 EBL', iso: ['9001', '14001', '45001'], version: 'v1.0', status: 'Approved', author: 'Lead Auditor', date: '2026-01-12' },
                     { id: 10, moduleId: 10, code: 'TR-EBL-CERT-AW-01', title: 'Daftar Hadir dan Sertifikat Pelatihan Awareness & Internal Auditor EBL', iso: ['9001', '14001', '45001'], version: 'v1.0', status: 'Approved', author: 'Training Specialist', date: '2026-02-18' },
-                    { id: 11, moduleId: 11, code: 'SOP-EBL-SITE-12', title: 'Instruksi Kerja Pengelolaan Limbah B3 dan Tanggap Darurat Tambang Site', iso: ['14001', '45001'], version: 'v1.2', status: 'Approved', author: 'Site Project Manager', date: '2026-02-25' },
-                    { id: 12, moduleId: 12, code: 'SOP-EBL-HO-03', title: 'Prosedur Pengadaan Barang dan Jasa Serta Evaluasi Vendor HO', iso: ['9001'], version: 'v2.0', status: 'Approved', author: 'Procurement HO', date: '2026-01-30' }
+                    { id: 11, moduleId: 11, dept: 'SHE', docType: 'IK', code: 'SOP-EBL-SITE-12', title: 'Instruksi Kerja Pengelolaan Limbah B3 dan Tanggap Darurat Tambang Site', iso: ['14001', '45001'], version: 'v1.2', status: 'Approved', author: 'Site Project Manager', date: '2026-02-25' },
+                    { id: 12, moduleId: 12, docType: 'SOP', code: 'SOP-EBL-HO-03', title: 'Prosedur Pengadaan Barang dan Jasa Serta Evaluasi Vendor HO', iso: ['9001'], version: 'v2.0', status: 'Approved', author: 'Procurement HO', date: '2026-01-30' }
                 ],
 
                 get filteredDocs() {
@@ -809,10 +1095,28 @@
                             doc.code.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
                             doc.title.toLowerCase().includes(this.searchQuery.toLowerCase());
                         let matchReview = this.selectedFilterReview === '' || (doc.reviewStatus || 'Belum Direview') === this.selectedFilterReview;
-                        return matchModule && matchIso && matchSearch && matchReview;
+                        let matchDept = !(this.isDeptFolder && this.activeDept) || (this.activeDept === '__none' ? !doc.dept : doc.dept === this.activeDept);
+                        let matchType = !(this.isDeptFolder && this.activeType) || doc.docType === this.activeType;
+                        return matchModule && matchIso && matchSearch && matchReview && matchDept && matchType;
                     });
                 },
 
+                get isFindings() { return this.activeModule === 13; },
+                get isDeptFolder() { return this.activeModule === 11 || this.activeModule === 12; },
+                get showDeptGrid() { return this.isDeptFolder && !this.activeDept && this.searchQuery === ''; },
+                get docModules() { return this.modules.filter(m => m.id !== 13); },
+                get currentDepts() { return this.deptsOf(this.activeModule); },
+                get findingsShown() {
+                    const q = this.findingFilter.q.trim().toLowerCase();
+                    return this.findings.filter(x => x.type === this.auditTab
+                        && (!this.findingFilter.status || x.status === this.findingFilter.status)
+                        && (!this.findingFilter.dept || x.dept === this.findingFilter.dept)
+                        && (!q || x.temuan.toLowerCase().includes(q))).sort((a, b) => a.no - b.no);
+                },
+                get findingStats() {
+                    const l = this.findings.filter(x => x.type === this.auditTab);
+                    return { total: l.length, major: l.filter(x => x.status === 'Major').length, minor: l.filter(x => x.status === 'Minor').length, ofi: l.filter(x => x.status === 'OFI').length, closed: l.filter(x => x.reviewResult === 'Sesuai').length };
+                },
                 get isAdmin() { return !!this.user && this.user.role === 'admin'; },
                 get canOpenSp() { return this.isAdmin || VIEWER_CAN_OPEN_SHAREPOINT; },
                 safeUrl(u) { return /^https:\/\//i.test(u || '') ? u : '#'; },
@@ -840,7 +1144,7 @@
                 logout() {
                     this.user = null;
                     this.entry = null;
-                    this.showUploadModal = this.showReviewModal = this.showInfoModal = this.showEditModal = this.showApprovalModal = false;
+                    this.showUploadModal = this.showReviewModal = this.showInfoModal = this.showEditModal = this.showApprovalModal = this.showFindingModal = this.showFindingReview = false;
                     this.closeDetail();
                     try { sessionStorage.removeItem('ebl_user'); } catch (e) {}
                 },
@@ -868,10 +1172,15 @@
                     if (!this.isAdmin || !this.newDoc.code || !this.newDoc.title) return;
                     const spUrlNew = (this.newDoc.spUrl || '').trim();
                     if (!/^https:\/\//i.test(spUrlNew)) { alert('Tempel link SharePoint dokumen (harus diawali https://).'); return; }
+                    const mid = parseInt(this.newDoc.moduleId);
+                    const isDept = mid === 11 || mid === 12;
+                    if (isDept && (!this.newDoc.dept || !this.newDoc.docType)) { alert('Pilih departemen dan kategori dokumen.'); return; }
                     const today = new Date().toISOString().split('T')[0];
                     this.documents.unshift({
-                        id: Date.now(),
-                        moduleId: parseInt(this.newDoc.moduleId),
+                        id: uid(),
+                        moduleId: mid,
+                        dept: isDept ? this.newDoc.dept : '',
+                        docType: isDept ? this.newDoc.docType : '',
                         code: this.newDoc.code,
                         title: this.newDoc.title,
                         iso: [...this.newDoc.iso],
@@ -887,6 +1196,97 @@
                     this.newDoc.code = '';
                     this.newDoc.title = '';
                     this.newDoc.spUrl = '';
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+
+                goModule(id) {
+                    this.activeModule = id;
+                    this.selectedFilterIso = '';
+                    this.selectedFilterReview = '';
+                    this.activeDept = '';
+                    this.activeType = '';
+                    this.searchQuery = '';
+                    this.auditTab = 'internal';
+                    this.findingFilter = { status: '', dept: '', q: '' };
+                },
+                navCount(id) { return id === 13 ? this.findings.length : this.documents.filter(d => d.moduleId === id).length; },
+                deptsOf(moduleId) { const id = parseInt(moduleId); return id === 11 ? DEPT_SITE : (id === 12 ? DEPT_HO : []); },
+                isDeptId(moduleId) { const id = parseInt(moduleId); return id === 11 || id === 12; },
+                deptCount(dp) { return this.documents.filter(d => d.moduleId === this.activeModule && d.dept === dp).length; },
+                uncatCount() { return this.documents.filter(d => d.moduleId === this.activeModule && !d.dept).length; },
+                typeCount(t) {
+                    return this.documents.filter(d => d.moduleId === this.activeModule
+                        && (this.activeDept === '__none' ? !d.dept : d.dept === this.activeDept)
+                        && (!t || d.docType === t)).length;
+                },
+                openAdd() {
+                    if (!this.isAdmin) return;
+                    if (this.activeModule > 0 && !this.isFindings) this.newDoc.moduleId = this.activeModule;
+                    this.newDoc.dept = (this.isDeptFolder && this.activeDept && this.activeDept !== '__none') ? this.activeDept : '';
+                    this.newDoc.docType = this.isDeptFolder ? this.activeType : '';
+                    this.showUploadModal = true;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+
+                // ---------- Temuan audit ----------
+                fmtDate(d) {
+                    if (!d) return '-';
+                    const p = d.split('-');
+                    return parseInt(p[2]) + ' ' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][parseInt(p[1]) - 1] + ' ' + p[0];
+                },
+                isOverdue(f) { return !!f.dueDate && f.reviewResult !== 'Sesuai' && f.dueDate < new Date().toISOString().split('T')[0]; },
+                nextNo(type) { return this.findings.filter(x => x.type === type).reduce((m, x) => Math.max(m, x.no || 0), 0) + 1; },
+                openFinding(f) {
+                    if (!this.isAdmin) return;
+                    this.findingError = '';
+                    if (f) {
+                        this.findingEditId = f.id;
+                        this.findingForm = { type: f.type, temuan: f.temuan, dept: f.dept, status: f.status, dueDate: f.dueDate || '', buktiUrl: f.buktiUrl || '', buktiNote: f.buktiNote || '' };
+                    } else {
+                        this.findingEditId = null;
+                        this.findingForm = { type: this.auditTab, temuan: '', dept: '', status: 'Minor', dueDate: '', buktiUrl: '', buktiNote: '' };
+                    }
+                    this.showFindingModal = true;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+                submitFinding() {
+                    if (!this.isAdmin) return;
+                    const f = this.findingForm, temuan = f.temuan.trim(), buktiUrl = (f.buktiUrl || '').trim();
+                    if (!temuan || !f.dept) { this.findingError = 'Isi temuan dan pilih departemen.'; return; }
+                    if (buktiUrl && !/^https:\/\//i.test(buktiUrl)) { this.findingError = 'Link bukti perbaikan harus diawali https://'; return; }
+                    const data = { type: f.type, temuan, dept: f.dept, status: f.status, dueDate: f.dueDate, buktiUrl, buktiNote: (f.buktiNote || '').trim() };
+                    if (this.findingEditId) {
+                        const x = this.findings.find(i => i.id === this.findingEditId);
+                        if (!x) return;
+                        const moved = x.type !== f.type;
+                        Object.assign(x, data);
+                        if (moved) x.no = this.nextNo(f.type);
+                    } else {
+                        this.findings.push({ id: uid(), no: this.nextNo(f.type), reviewResult: '', createdAt: new Date().toISOString().split('T')[0], ...data });
+                    }
+                    this.auditTab = f.type;
+                    this.showFindingModal = false;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+                deleteFinding(id) {
+                    if (!this.isAdmin) return;
+                    if (confirm('Hapus temuan audit ini?')) this.findings = this.findings.filter(x => x.id !== id);
+                },
+                openFindingReview(f) {
+                    if (!this.isAdmin) return;
+                    this.findingReviewTarget = f;
+                    this.findingReviewForm = { result: f.reviewResult || '', reviewer: f.reviewer || this.user.name, note: f.reviewNote || '' };
+                    this.showFindingReview = true;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+                submitFindingReview() {
+                    const f = this.findingReviewTarget;
+                    if (!this.isAdmin || !f || !this.findingReviewForm.result) return;
+                    f.reviewResult = this.findingReviewForm.result;
+                    f.reviewer = this.findingReviewForm.reviewer;
+                    f.reviewNote = this.findingReviewForm.note;
+                    f.reviewDate = new Date().toISOString().split('T')[0];
+                    this.showFindingReview = false;
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
@@ -935,7 +1335,7 @@
                 openEdit(doc) {
                     if (!this.isAdmin) return;
                     this.editDoc = doc;
-                    this.editForm = { moduleId: doc.moduleId, code: doc.code, title: doc.title, version: doc.version, iso: [...doc.iso], status: doc.status, note: '', spUrl: doc.spUrl || '' };
+                    this.editForm = { moduleId: doc.moduleId, code: doc.code, title: doc.title, version: doc.version, iso: [...doc.iso], status: doc.status, note: '', spUrl: doc.spUrl || '', dept: doc.dept || '', docType: doc.docType || '' };
                     this.editError = '';
                     this.showEditModal = true;
                     this.$nextTick(() => { lucide.createIcons(); });
@@ -947,6 +1347,9 @@
                     const code = f.code.trim(), title = f.title.trim(), version = f.version.trim(), spUrl = (f.spUrl || '').trim();
                     const iso = [...f.iso].sort().join(', ');
                     const moduleId = parseInt(f.moduleId);
+                    const isDept = moduleId === 11 || moduleId === 12;
+                    const dept = isDept ? f.dept : '', docType = isDept ? f.docType : '';
+                    if (isDept && (!dept || !docType)) { this.editError = 'Pilih departemen dan kategori dokumen.'; return; }
                     if (!/^https:\/\//i.test(spUrl)) { this.editError = 'Link SharePoint wajib diisi dan diawali https://'; return; }
                     const spChanged = spUrl !== (d.spUrl || '');
                     const changes = [];
@@ -956,6 +1359,8 @@
                     if (iso !== [...d.iso].sort().join(', ')) changes.push('Cakupan standar menjadi ISO ' + (iso || '-'));
                     if (f.status !== d.status) changes.push('Status: ' + d.status + ' menjadi ' + f.status);
                     if (moduleId !== d.moduleId) changes.push('Dipindahkan ke folder ' + this.folderName(moduleId));
+                    if (dept !== (d.dept || '')) changes.push('Departemen: ' + (d.dept || '-') + ' menjadi ' + (dept || '-'));
+                    if (docType !== (d.docType || '')) changes.push('Kategori: ' + (d.docType || '-') + ' menjadi ' + (docType || '-'));
                     if (spChanged) changes.push('Link dokumen SharePoint diperbarui');
                     if (!changes.length) { this.editError = 'Belum ada perubahan. Ubah data atau link dokumen terlebih dahulu.'; return; }
                     if (!f.note.trim()) { this.editError = 'Isi catatan perubahan agar revisi tercatat.'; return; }
@@ -965,7 +1370,7 @@
 
                     const today = new Date().toISOString().split('T')[0];
                     d.rev = (d.rev || 0) + 1;
-                    Object.assign(d, { code, title, version, iso: [...f.iso], status: f.status, moduleId, updatedAt: today, spUrl });
+                    Object.assign(d, { code, title, version, iso: [...f.iso], status: f.status, moduleId, updatedAt: today, spUrl, dept, docType });
                     d.history.push({ rev: d.rev, spUrl: spChanged ? spUrl : '', version, date: today, by: this.user.name, note: f.note.trim(), changes });
                     this.showEditModal = false;
                     this.editDoc = null;
@@ -998,6 +1403,9 @@
                             if (Array.isArray(saved)) this.documents = saved;
                         }
                     } catch (e) {}
+                    try { const rawF = localStorage.getItem('ebl_findings_v1'); if (rawF) { const sf = JSON.parse(rawF); if (Array.isArray(sf)) this.findings = sf; } } catch (e) {}
+                    this.$watch('findings', v => { try { localStorage.setItem('ebl_findings_v1', JSON.stringify(v)); } catch (e) {} });
+                    ['activeDept', 'activeType', 'auditTab', 'findings', 'showDeptGrid', 'activeModule'].forEach(k => this.$watch(k, () => this.$nextTick(() => { lucide.createIcons(); })));
                     this.$watch('documents', v => { try { localStorage.setItem('ebl_docs_v1', JSON.stringify(v)); } catch (e) {} });
                     try {
                         const key = sessionStorage.getItem('ebl_user');
