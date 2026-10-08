@@ -1113,7 +1113,7 @@
                 if (!r.ok) {
                     let m = '';
                     try { m = (await r.json()).error.message || ''; } catch (e) {}
-                    if (/INVALID|NOT_FOUND|PASSWORD/.test(m)) throw new Error('Username atau kata sandi salah.');
+                    if (/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND|INVALID_EMAIL/.test(m)) throw new Error('Username atau kata sandi salah.');
                     throw new Error('Login gagal' + (m ? ' (' + m + ')' : '') + '.');
                 }
                 const j = await r.json();
@@ -1325,7 +1325,7 @@
                     this.loginError = '';
                     try {
                         if (CLOUD_ON) {
-                            const uname = this.loginForm.username.trim().toLowerCase();
+                            const uname = this.loginForm.username.trim().toLowerCase().split('@')[0];
                             const cu = USERS.find(x => x.username === uname);
                             if (!cu) { this.loginError = 'Username atau kata sandi salah.'; return; }
                             await fbApi.signIn(uname, this.loginForm.password);
