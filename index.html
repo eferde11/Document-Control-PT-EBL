@@ -1085,7 +1085,7 @@
         const DOC_TYPES = ['KPI dan Bukti Pencapaian', 'Job Description', 'IBPR IADL', 'SOP', 'Form', 'IK', 'STD'];
         // Sinkronisasi realtime antar pengguna lewat Firebase Realtime Database (lihat README dan firebase-rules.json).
         // Isi dbUrl dan apiKey. Kalau dikosongkan, aplikasi memakai mode data.json (tanpa server).
-        const CLOUD = { dbUrl: '', apiKey: '', emailDomain: 'ebl.app' };
+        const CLOUD = {  dbUrl: 'https://doco-ebl-default-rtdb.firebaseio.com', apiKey: 'AIzaSy...', emailDomain: 'ebl.app' };
         const CLOUD_ON = !!(CLOUD.dbUrl && CLOUD.apiKey);
         const FB_AUTH = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword';
         const FB_REFRESH = 'https://securetoken.googleapis.com/v1/token';
