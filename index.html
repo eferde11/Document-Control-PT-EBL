@@ -99,14 +99,14 @@
                     <h1 class="font-display text-4xl sm:text-5xl font-extrabold leading-[1.05] text-brand-navy">Dokumen ISO terkontrol, selalu terbaru.</h1>
                     <p class="mt-5 text-slate-600 leading-relaxed">Lihat dan kelola dokumen Sistem Manajemen Terintegrasi ISO 9001, 14001, dan 45001 untuk seluruh departemen Site dan HO.</p>
                     <div class="mt-8 flex flex-col sm:flex-row gap-3">
-                        <button @click="enterViewer()" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-brand-navy hover:bg-brand-navyDark text-white px-6 py-3.5 rounded-xl font-semibold shadow-lg shadow-brand-navy/25 transition-colors">
+                        <button @click="allowGuest ? enterViewer() : (entry = 'user')" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-brand-navy hover:bg-brand-navyDark text-white px-6 py-3.5 rounded-xl font-semibold shadow-lg shadow-brand-navy/25 transition-colors">
                             <i data-lucide="eye" class="w-5 h-5"></i> Lihat dokumen
                         </button>
                         <button @click="entry = 'user'" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 border-2 border-slate-200 hover:border-brand-leaf hover:text-brand-leaf text-slate-700 px-6 py-3.5 rounded-xl font-semibold transition-colors">
-                            <i data-lucide="lock-keyhole" class="w-5 h-5"></i> Masuk sebagai User
+                            <i data-lucide="lock-keyhole" class="w-5 h-5"></i> Masuk dengan akun
                         </button>
                     </div>
-                    <p class="mt-3 text-xs text-slate-400">Viewer langsung masuk tanpa login. Login khusus Document Controller.</p>
+                    <p class="mt-3 text-xs text-slate-400" x-text="allowGuest ? 'Lihat dokumen tanpa login. Akun Viewer, Departemen, dan Document Controller masuk lewat tombol di samping.' : 'Masuk dengan akun Viewer, Departemen, atau Document Controller.'"></p>
                     <dl class="mt-10 pt-6 border-t border-slate-100 flex gap-8 sm:gap-12">
                         <div><dt class="text-xs text-slate-500">Folder dokumen</dt><dd class="font-display text-2xl font-bold text-brand-navy">13</dd></div>
                         <div><dt class="text-xs text-slate-500">Standar ISO</dt><dd class="font-display text-2xl font-bold text-brand-leaf">3</dd></div>
@@ -158,12 +158,12 @@
                 <img :src="logoMark" alt="Logo EBL" class="w-10 h-10 shrink-0">
                 <div>
                     <h1 class="font-display text-base font-bold leading-snug">Document Control</h1>
-                    <p class="text-[11px] text-brand-sun">Masuk sebagai User (Document Controller)</p>
+                    <p class="text-[11px] text-brand-sun">Masuk dengan akun</p>
                 </div>
             </div>
             <form @submit.prevent="login" class="p-6 space-y-4 text-xs">
                 <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Username</label>
+                    <label class="block font-semibold text-slate-700 mb-1" x-text="cloudOn ? 'Email' : 'Username'"></label>
                     <input type="text" x-model="loginForm.username" autocomplete="username" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
                 </div>
                 <div>
@@ -224,7 +224,7 @@
                     </div>
                     <div class="truncate">
                         <p class="text-xs font-semibold text-white truncate" x-text="user ? user.name : ''"></p>
-                        <p class="text-[10px] text-slate-400" x-text="isAdmin ? 'Document Controller · akses penuh' : 'Viewer · lihat saja'"></p>
+                        <p class="text-[10px] text-slate-400" x-text="isAdmin ? 'Document Controller · akses penuh' : (isDeptUser ? 'Departemen · tambah dan ubah dokumen departemen' : 'Viewer · lihat saja')"></p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -250,13 +250,24 @@
                     <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">Sistem Manajemen Terintegrasi PT Energi Batubara Lestari (ISO 9001, 14001, 45001)</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <a x-show="isAdmin" :href="spFolderUrl" target="_blank" rel="noopener noreferrer" class="border border-slate-300 hover:border-sky-600 hover:text-sky-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="folder-open" class="w-4 h-4"></i> Folder SharePoint</a>
-                    <span x-show="!isAdmin" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Mode lihat saja</span>
-                    <button x-show="isAdmin" @click="isFindings ? openFinding() : openAdd()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
+                    <button x-show="cloudOn" @click="cloudPull(true)" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition" :title="syncMsg || 'Klik untuk menyinkronkan sekarang'">
+                        <span class="w-2 h-2 rounded-full" :class="{ 'bg-emerald-500': syncState === 'ok', 'bg-amber-500 animate-pulse': syncState === 'loading' || syncState === 'saving', 'bg-rose-500': syncState === 'error' }"></span>
+                        <span x-text="syncLabel"></span>
+                    </button>
+                    <button x-show="!cloudOn && (isAdmin || isDeptUser)" @click="showDataModal = true" class="relative border border-slate-300 hover:border-emerald-600 hover:text-emerald-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="database" class="w-4 h-4"></i> Data<span x-show="dirty" class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white"></span></button>
+                    <a x-show="isAdmin || isDeptUser" :href="spFolderUrl" target="_blank" rel="noopener noreferrer" class="border border-slate-300 hover:border-sky-600 hover:text-sky-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="folder-open" class="w-4 h-4"></i> Folder SharePoint</a>
+                    <span x-show="isDeptUser" class="px-3 py-1.5 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="building-2" class="w-3.5 h-3.5"></i> Akses departemen</span>
+                    <span x-show="!isAdmin && !isDeptUser" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Mode lihat saja</span>
+                    <button x-show="isAdmin || (isDeptUser && !isFindings)" @click="isFindings ? openFinding() : openAdd()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
                         <i data-lucide="file-plus" class="w-4 h-4"></i> <span x-text="isFindings ? 'Tambah Temuan' : 'Tambah Dokumen'"></span>
                     </button>
                 </div>
             </header>
+            <div x-show="!cloudOn && (isAdmin || isDeptUser) && dirty" x-cloak class="bg-amber-50 border-b border-amber-200 px-4 md:px-8 py-2.5 flex items-center gap-3 text-xs text-amber-900">
+                <i data-lucide="info" class="w-4 h-4 shrink-0"></i>
+                <span class="flex-1" x-text="isAdmin ? 'Ada perubahan yang belum dipublikasikan ke link website. Pengguna lain belum melihatnya.' : 'Perubahan Anda baru tersimpan di browser ini. Kirim ke Document Controller agar dipublikasikan.'"></span>
+                <button @click="showDataModal = true" class="px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-semibold whitespace-nowrap">Kelola data</button>
+            </div>
 
             <!-- Dashboard Content Body -->
             <div class="p-4 md:p-8 space-y-5">
@@ -349,7 +360,7 @@
                                         <th class="p-4">Due date</th>
                                         <th class="p-4">Bukti Perbaikan</th>
                                         <th class="p-4">Hasil Review</th>
-                                        <th class="p-4 text-right" x-show="isAdmin">Aksi</th>
+                                        <th class="p-4 text-right" x-show="isAdmin || isDeptUser">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
@@ -369,17 +380,19 @@
                                                 <a x-show="x.buktiUrl && canOpenSp" :href="safeUrl(x.buktiUrl)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Lihat bukti</a>
                                                 <span x-show="!x.buktiUrl" class="text-slate-400 text-xs">Belum ada bukti</span>
                                                 <p x-show="x.buktiNote" class="text-[11px] text-slate-500 mt-1 max-w-[220px]" x-text="x.buktiNote"></p>
+                                                <p x-show="x.buktiDate" class="text-[10px] text-slate-400 mt-1" x-text="'Diperbarui ' + x.buktiDate + ' oleh ' + x.buktiBy"></p>
                                             </td>
                                             <td class="p-4 whitespace-nowrap">
                                                 <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold" :class="{ 'bg-slate-100 text-slate-500': !x.reviewResult, 'bg-teal-100 text-teal-700': x.reviewResult === 'Sesuai', 'bg-orange-100 text-orange-700': x.reviewResult === 'Belum Sesuai' }" x-text="x.reviewResult || 'Belum Direview'"></span>
                                                 <p class="text-[10px] text-slate-400 mt-1" x-show="x.reviewDate" x-text="x.reviewDate + ' oleh ' + x.reviewer"></p>
                                                 <p class="text-[11px] text-slate-500 mt-1 max-w-[200px] whitespace-normal" x-show="x.reviewNote" x-text="x.reviewNote"></p>
                                             </td>
-                                            <td class="p-4 text-right whitespace-nowrap" x-show="isAdmin">
+                                            <td class="p-4 text-right whitespace-nowrap" x-show="isAdmin || isDeptUser">
                                                 <div class="flex items-center justify-end gap-1">
-                                                    <button @click="openFindingReview(x)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition"><i data-lucide="clipboard-check" class="w-4 h-4"></i> Review</button>
-                                                    <button @click="openFinding(x)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit temuan"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                                                    <button @click="deleteFinding(x.id)" class="p-1.5 hover:bg-rose-100 rounded-lg text-rose-600 transition" title="Hapus temuan"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                                    <button x-show="isDeptUser" @click="openEvidence(x)" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-sky-600/40 text-sky-700 text-xs font-semibold hover:bg-sky-600 hover:text-white transition"><i data-lucide="upload" class="w-4 h-4"></i> Bukti</button>
+                                                    <button x-show="isAdmin" @click="openFindingReview(x)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition"><i data-lucide="clipboard-check" class="w-4 h-4"></i> Review</button>
+                                                    <button x-show="isAdmin" @click="openFinding(x)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit temuan"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                                    <button x-show="isAdmin" @click="deleteFinding(x.id)" class="p-1.5 hover:bg-rose-100 rounded-lg text-rose-600 transition" title="Hapus temuan"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -524,7 +537,7 @@
                                                 </button>
                                                 <a x-show="doc.spUrl && canOpenSp" :href="safeUrl(doc.spUrl)" target="_blank" rel="noopener noreferrer" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition" title="Buka dokumen di SharePoint"><i data-lucide="external-link" class="w-4 h-4"></i> Buka</a>
                                                 <button x-show="isAdmin" @click="openApproval(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-ochre-600/50 text-ochre-600 text-xs font-semibold hover:bg-ochre-500 hover:text-slate-950 transition" title="Approval dokumen"><i data-lucide="badge-check" class="w-4 h-4"></i> Approval</button>
-                                                <button x-show="isAdmin" @click="openEdit(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen">
+                                                <button x-show="canEdit(doc)" @click="openEdit(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen">
                                                     <i data-lucide="pencil" class="w-4 h-4"></i>
                                                 </button>
                                                 <button @click="viewDetail(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Lihat dokumen">
@@ -574,7 +587,7 @@
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Pilih Modul Folder ISO</label>
                     <select x-model="newDoc.moduleId" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
-                        <template x-for="mod in docModules" :key="mod.id">
+                        <template x-for="mod in formModules" :key="mod.id">
                             <option :value="mod.id" x-text="mod.name"></option>
                         </template>
                     </select>
@@ -703,10 +716,10 @@
                         <div><dt class="text-slate-500">Status dokumen</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.status"></dd></div>
                         <div><dt class="text-slate-500">Hasil review</dt><dd class="font-semibold text-slate-800" x-text="(detailDoc.reviewStatus || 'Belum Direview') + (detailDoc.reviewDate ? ' (' + detailDoc.reviewDate + ', ' + detailDoc.reviewer + ')' : '')"></dd></div>
                         <div><dt class="text-slate-500">Didaftarkan oleh</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.author + ', ' + detailDoc.date"></dd></div>
-                        <div x-show="detailDoc.approvalDate"><dt class="text-slate-500">Approval</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.status + ' (' + detailDoc.approvalDate + ', ' + detailDoc.approver + ')'"></dd></div>
+                        <div x-show="detailDoc.approvalDate && (detailDoc.status === 'Approved' || detailDoc.status === 'Tidak Approved')"><dt class="text-slate-500">Approval</dt><dd class="font-semibold text-slate-800" x-text="detailDoc.status + ' (' + detailDoc.approvalDate + ', ' + detailDoc.approver + ')'"></dd></div>
                     </dl>
                     <p x-show="detailDoc.reviewNote" class="p-3 bg-slate-50 border rounded-lg text-slate-600" x-text="'Catatan review: ' + detailDoc.reviewNote"></p>
-                    <p x-show="detailDoc.approvalNote" class="p-3 bg-slate-50 border rounded-lg text-slate-600" x-text="'Catatan approval: ' + detailDoc.approvalNote"></p>
+                    <p x-show="detailDoc.approvalNote && (detailDoc.status === 'Approved' || detailDoc.status === 'Tidak Approved')" class="p-3 bg-slate-50 border rounded-lg text-slate-600" x-text="'Catatan approval: ' + detailDoc.approvalNote"></p>
                     <div>
                         <h5 class="font-display font-bold text-slate-900 mb-3" x-text="'Riwayat revisi (' + (detailDoc.rev || 0) + ' perubahan)'"></h5>
                         <ol class="border-l-2 border-slate-200 ml-1.5 space-y-4">
@@ -746,11 +759,12 @@
                 <button @click="showEditModal = false" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <form @submit.prevent="submitEdit" class="p-6 space-y-4 text-xs">
+                <p x-show="!isAdmin" class="p-3 rounded-lg bg-sky-50 border border-sky-200 text-sky-800">Setelah diubah, status dokumen kembali ke In Review sampai disetujui Document Controller.</p>
                 <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-medium" x-text="editDoc ? 'Revisi saat ini: ke-' + (editDoc.rev || 0) + '. Perubahan yang disimpan akan tercatat sebagai Revisi ke-' + ((editDoc.rev || 0) + 1) + '.' : ''"></div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Folder</label>
                     <select x-model="editForm.moduleId" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        <template x-for="mod in docModules" :key="mod.id"><option :value="mod.id" x-text="mod.name"></option></template>
+                        <template x-for="mod in formModules" :key="mod.id"><option :value="mod.id" x-text="mod.name"></option></template>
                     </select>
                 </div>
                 <div x-show="isDeptId(editForm.moduleId)" class="grid grid-cols-2 gap-4">
@@ -791,7 +805,7 @@
                         <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="45001" x-model="editForm.iso" class="rounded text-emerald-600"> <span class="font-medium text-slate-700">ISO 45001</span></label>
                     </div>
                 </div>
-                <div>
+                <div x-show="isAdmin">
                     <label class="block font-semibold text-slate-700 mb-1">Status Dokumen</label>
                     <select x-model="editForm.status" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         <option value="Approved">Approved</option>
@@ -875,6 +889,37 @@
         </div>
     </div>
 
+    <!-- Modal Bukti Perbaikan -->
+    <div x-show="showEvidence" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="modal-card bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i data-lucide="upload" class="w-4 h-4 text-emerald-400"></i> Bukti Perbaikan</h3>
+                <button @click="showEvidence = false" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form @submit.prevent="submitEvidence" class="p-6 space-y-4 text-xs">
+                <div class="p-3 bg-slate-50 rounded-lg border">
+                    <p class="font-semibold text-slate-700" x-text="evidenceTarget ? 'Temuan No. ' + evidenceTarget.no + ' · ' + evidenceTarget.dept : ''"></p>
+                    <p class="text-slate-600 mt-0.5 line-clamp-3" x-text="evidenceTarget ? evidenceTarget.temuan : ''"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Link Bukti Perbaikan di SharePoint</label>
+                    <input type="url" x-model="evidenceForm.buktiUrl" required placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-slate-400 mt-1">Unggah bukti ke folder SharePoint lewat tombol "Folder SharePoint", lalu salin link berbagi dan tempel di sini.</p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Keterangan Bukti</label>
+                    <textarea x-model="evidenceForm.buktiNote" rows="3" placeholder="Contoh: Foto pemasangan rambu dan daftar hadir briefing" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                </div>
+                <p x-show="evidenceTarget && evidenceTarget.reviewResult" class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">Temuan ini sudah direview. Menyimpan bukti baru mengembalikan hasil review ke Belum Direview.</p>
+                <p x-show="evidenceError" x-text="evidenceError" class="text-rose-600 font-medium"></p>
+                <div class="pt-4 flex justify-end gap-2 border-t">
+                    <button type="button" @click="showEvidence = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Bukti</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal Review Temuan -->
     <div x-show="showFindingReview" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
         <div class="modal-card bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border">
@@ -911,6 +956,47 @@
                     <button type="submit" :disabled="!findingReviewForm.result" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-semibold shadow-sm">Simpan Review</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Kelola Data -->
+    <div x-show="showDataModal" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="modal-card bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[92vh] overflow-y-auto border">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500 sticky top-0 z-10">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i data-lucide="database" class="w-4 h-4 text-emerald-400"></i> Kelola Data Website</h3>
+                <button @click="showDataModal = false; dataMsg = ''" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-4 text-xs text-slate-700">
+                <dl class="grid grid-cols-2 gap-3">
+                    <div class="p-3 rounded-lg bg-slate-50 border"><dt class="text-slate-500">Sumber data website</dt><dd class="font-semibold mt-0.5" x-text="dataSource === 'publik' ? 'data.json (publik)' : 'Contoh bawaan (data.json belum ada)'"></dd></div>
+                    <div class="p-3 rounded-lg border" :class="dirty ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'"><dt class="text-slate-500">Perubahan belum dipublikasikan</dt><dd class="font-semibold mt-0.5" x-text="dirty ? 'Ada (' + documents.length + ' dokumen, ' + findings.length + ' temuan di browser ini)' : 'Tidak ada'"></dd></div>
+                </dl>
+                <p x-show="staleDraft" class="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800">Data website sudah diperbarui sejak Anda mulai mengubah di browser ini. Unduh perubahan Anda terlebih dahulu, lalu buang perubahan lokal agar mengikuti data terbaru.</p>
+
+                <div x-show="isAdmin" class="space-y-2">
+                    <p class="font-semibold text-slate-900">Mempublikasikan perubahan ke link website</p>
+                    <ol class="list-decimal pl-5 space-y-1 text-slate-600">
+                        <li>Klik <b>Unduh data.json</b>.</li>
+                        <li>Buka repositori GitHub, lalu <b>Add file &gt; Upload files</b> dan unggah <code>data.json</code> ke folder yang sama dengan <code>index.html</code> (timpa file lama).</li>
+                        <li>Klik <b>Commit changes</b>. Setelah 1 sampai 2 menit, semua pengguna melihat data terbaru di link yang sama.</li>
+                    </ol>
+                </div>
+                <div x-show="isDeptUser" class="space-y-2">
+                    <p class="font-semibold text-slate-900">Mengirim perubahan ke Document Controller</p>
+                    <ol class="list-decimal pl-5 space-y-1 text-slate-600">
+                        <li>Klik <b>Unduh perubahan</b>.</li>
+                        <li>Kirim berkas <code>perubahan-departemen.json</code> ke Document Controller.</li>
+                        <li>Setelah Document Controller mempublikasikan, klik <b>Buang perubahan di browser ini</b> agar data Anda mengikuti website.</li>
+                    </ol>
+                </div>
+
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <button @click="exportData()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> <span x-text="isAdmin ? 'Unduh data.json' : 'Unduh perubahan'"></span></button>
+                    <label x-show="isAdmin" class="px-4 py-2 border rounded-lg font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer flex items-center gap-2"><i data-lucide="upload" class="w-4 h-4"></i> Impor perubahan departemen<input type="file" accept=".json,application/json" class="hidden" @change="importData($event)"></label>
+                    <button @click="discardDraft()" x-show="dirty" class="px-4 py-2 border border-rose-200 rounded-lg font-semibold text-rose-700 hover:bg-rose-50">Buang perubahan di browser ini</button>
+                </div>
+                <p x-show="dataMsg" x-text="dataMsg" class="font-semibold text-emerald-700"></p>
+            </div>
         </div>
     </div>
 
@@ -986,13 +1072,80 @@
         // Akun dasar (kata sandi disimpan sebagai hash SHA-256, bukan teks biasa).
         // Ganti hash di bawah untuk mengubah kata sandi. Ini hanya penghalang tampilan, bukan keamanan server.
         const USERS = [
-            { username: 'docoebl', name: 'Document Controller EBL', role: 'admin', hash: '32e00183831ffb9cc1a9089e3ad39da85bf9e7b137b858815c041236d9f1bc12' }
+            { username: 'docoebl', name: 'Document Controller EBL', role: 'admin', hash: '32e00183831ffb9cc1a9089e3ad39da85bf9e7b137b858815c041236d9f1bc12' },
+            { username: 'viewer', name: 'Viewer', role: 'viewer', hash: '5d851a0db798dda14cc31e28064c2691c4b8ac2688975a1e9e7b018a69b555c2' },
+            { username: 'dept', name: 'Departemen', role: 'dept', hash: '148e0f2bcf942e75ea92409cb0046ed01574b4346ec0b49f8cba48cd57edfe5c' }
         ];
         const SHAREPOINT_FOLDER_URL = 'https://hitdigitalid-my.sharepoint.com/:f:/g/personal/fani_damayanti_hasnurgroup_com/IgBr0caM1Ym0So0NpFrVRT-YAcGx49eJlsNFg1X3KG3DcUM?e=RljwIT'; // folder penyimpanan dokumen di SharePoint
+        const ALLOW_GUEST_VIEWER = true; // true = tombol "Lihat dokumen" masuk tanpa login. false = wajib login dengan akun Viewer.
+        const DEPT_EDIT_FOLDERS = [11, 12]; // folder yang boleh ditambah dan diubah oleh akun Departemen
         const VIEWER_CAN_OPEN_SHAREPOINT = true; // false = tombol "Buka di SharePoint" hanya untuk admin
         const DEPT_SITE = ['KTT', 'Gudang Handak', 'SHE', 'Technical Service & Planning', 'Mining Operation Production', 'Coal Crushing Plant & Hauling', 'Quality Control', 'Revegetasi & Rehabilitasi', 'Government Relation & CSR', 'Human Capital & Administration', 'Legal Compliance & General Handling'];
         const DEPT_HO = ['Internal Audit', 'CPOC', 'FAT', 'Engineering & Operation', 'Marketing'];
         const DOC_TYPES = ['KPI dan Bukti Pencapaian', 'Job Description', 'IBPR IADL', 'SOP', 'Form', 'IK', 'STD'];
+        // Sinkronisasi realtime antar pengguna lewat Firebase Realtime Database (lihat README dan firebase-rules.json).
+        // Isi dbUrl dan apiKey. Kalau dikosongkan, aplikasi memakai mode data.json (tanpa server).
+        const CLOUD = { dbUrl: '', apiKey: '', emailDomain: 'ebl.app' };
+        const CLOUD_ON = !!(CLOUD.dbUrl && CLOUD.apiKey);
+        const FB_AUTH = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword';
+        const FB_REFRESH = 'https://securetoken.googleapis.com/v1/token';
+        const canon = v => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x)) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a < b ? -1 : 1)) : x);
+        const snapshot = { documents: new Map(), findings: new Map() };
+        let rawRoot = {};   // salinan isi database (diperbarui oleh aliran realtime)
+        const fbSet = (root, parts, val) => {
+            if (!parts.length) return (val && typeof val === 'object') ? val : {};
+            let o = root;
+            for (let i = 0; i < parts.length - 1; i++) { if (!o[parts[i]] || typeof o[parts[i]] !== 'object') o[parts[i]] = {}; o = o[parts[i]]; }
+            const last = parts[parts.length - 1];
+            if (val === null || val === undefined) delete o[last]; else o[last] = val;
+            return root;
+        };
+        const fbNode = (key, x) => key === 'documents' ? { j: JSON.stringify(x), m: Number(x.moduleId) } : { j: JSON.stringify(x) };
+        const fbRows = (root, key) => Object.values((root && root[key]) || {}).map(n => { try { return JSON.parse(n.j); } catch (e) { return null; } }).filter(Boolean);
+        const fbApi = {
+            session: null,
+            base() { return CLOUD.dbUrl.replace(/\/+$/, ''); },
+            loadSession() { try { const raw = sessionStorage.getItem('ebl_cloud'); this.session = raw ? JSON.parse(raw) : null; } catch (e) { this.session = null; } return this.session; },
+            saveSession(v) { this.session = v; try { v ? sessionStorage.setItem('ebl_cloud', JSON.stringify(v)) : sessionStorage.removeItem('ebl_cloud'); } catch (e) {} },
+            async signIn(username, password) {
+                const email = (username + '@' + CLOUD.emailDomain).toLowerCase();
+                const r = await fetch(FB_AUTH + '?key=' + encodeURIComponent(CLOUD.apiKey), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, returnSecureToken: true }) });
+                if (!r.ok) {
+                    let m = '';
+                    try { m = (await r.json()).error.message || ''; } catch (e) {}
+                    if (/INVALID|NOT_FOUND|PASSWORD/.test(m)) throw new Error('Username atau kata sandi salah.');
+                    throw new Error('Login gagal' + (m ? ' (' + m + ')' : '') + '.');
+                }
+                const j = await r.json();
+                this.saveSession({ idToken: j.idToken, refreshToken: j.refreshToken, expiresAt: Date.now() / 1000 + Number(j.expiresIn || 3600), email, username: username.toLowerCase() });
+            },
+            signOut() { this.saveSession(null); },
+            async token() {
+                const sess = this.session;
+                if (!sess) return null;
+                if (sess.expiresAt - 60 > Date.now() / 1000) return sess.idToken;
+                const r = await fetch(FB_REFRESH + '?key=' + encodeURIComponent(CLOUD.apiKey), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(sess.refreshToken) });
+                if (!r.ok) { this.saveSession(null); throw new Error('Sesi login berakhir. Silakan masuk lagi.'); }
+                const j = await r.json();
+                this.saveSession({ ...sess, idToken: j.id_token, refreshToken: j.refresh_token, expiresAt: Date.now() / 1000 + Number(j.expires_in || 3600) });
+                return j.id_token;
+            },
+            async readAll() {
+                const r = await fetch(this.base() + '/.json', { cache: 'no-store' });
+                if (!r.ok) throw new Error('Gagal membaca data (kode ' + r.status + ').');
+                return (await r.json()) || {};
+            },
+            async commit(table, upserts, removed) {
+                const body = {};
+                upserts.forEach(x => { body['k' + x.id] = x.node; });
+                removed.forEach(id => { body['k' + id] = null; });
+                const t = await this.token();
+                if (!t) throw new Error('Belum masuk. Silakan login ulang.');
+                const r = await fetch(this.base() + '/' + table + '.json?auth=' + encodeURIComponent(t), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                if (!r.ok) throw new Error('Server menolak perubahan (kode ' + r.status + ').');
+            }
+        };
+        let published = null; // data publik terakhir (dari data.json atau contoh bawaan)
         let uidSeq = 0;
         const uid = () => Date.now() * 1000 + (uidSeq = (uidSeq + 1) % 1000);
         const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ebl:' + t)))].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -1045,6 +1198,27 @@
                 reviewForm: { result: '', reviewer: '', note: '' },
                 
                 spFolderUrl: SHAREPOINT_FOLDER_URL,
+                cloudOn: CLOUD_ON,
+                dataReady: false,
+                dataSource: 'contoh',
+                dirty: false,
+                staleDraft: false,
+                showDataModal: false,
+                dataMsg: '',
+                allowGuest: ALLOW_GUEST_VIEWER,
+                showEvidence: false,
+                evidenceTarget: null,
+                evidenceForm: { buktiUrl: '', buktiNote: '' },
+                evidenceError: '',
+                syncState: CLOUD_ON ? 'loading' : 'local',
+                syncAt: '',
+                syncMsg: '',
+                pendingPush: false,
+                pushing: false,
+                importAsked: false,
+                streamUp: false,
+                remoteWaiting: false,
+                lastEvent: 0,
                 newDoc: {
                     spUrl: '',
                     moduleId: 1,
@@ -1118,35 +1292,69 @@
                     return { total: l.length, major: l.filter(x => x.status === 'Major').length, minor: l.filter(x => x.status === 'Minor').length, ofi: l.filter(x => x.status === 'OFI').length, closed: l.filter(x => x.reviewResult === 'Sesuai').length };
                 },
                 get isAdmin() { return !!this.user && this.user.role === 'admin'; },
-                get canOpenSp() { return this.isAdmin || VIEWER_CAN_OPEN_SHAREPOINT; },
+                get isDeptUser() { return !!this.user && this.user.role === 'dept'; },
+                get canAdd() { return this.isAdmin || this.isDeptUser; },
+                get formModules() { return this.isAdmin ? this.docModules : this.docModules.filter(m => DEPT_EDIT_FOLDERS.includes(m.id)); },
+                get canOpenSp() { return this.isAdmin || this.isDeptUser || VIEWER_CAN_OPEN_SHAREPOINT; },
+                canEdit(doc) { return this.isAdmin || (this.isDeptUser && DEPT_EDIT_FOLDERS.includes(doc.moduleId)); },
+                openEvidence(f) {
+                    if (!(this.isAdmin || this.isDeptUser)) return;
+                    this.evidenceTarget = f;
+                    this.evidenceForm = { buktiUrl: f.buktiUrl || '', buktiNote: f.buktiNote || '' };
+                    this.evidenceError = '';
+                    this.showEvidence = true;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
+                submitEvidence() {
+                    const f = this.evidenceTarget;
+                    if (!f || !(this.isAdmin || this.isDeptUser)) return;
+                    const url = (this.evidenceForm.buktiUrl || '').trim();
+                    if (!/^https:\/\//i.test(url)) { this.evidenceError = 'Tempel link bukti perbaikan di SharePoint (harus diawali https://).'; return; }
+                    f.buktiUrl = url;
+                    f.buktiNote = (this.evidenceForm.buktiNote || '').trim();
+                    f.buktiDate = new Date().toISOString().split('T')[0];
+                    f.buktiBy = this.user.name;
+                    if (f.reviewResult) { f.reviewResult = ''; delete f.reviewer; delete f.reviewDate; delete f.reviewNote; }   // bukti baru perlu direview ulang
+                    this.showEvidence = false;
+                    this.$nextTick(() => { lucide.createIcons(); });
+                },
                 safeUrl(u) { return /^https:\/\//i.test(u || '') ? u : '#'; },
 
                 async login() {
                     this.loginBusy = true;
                     this.loginError = '';
                     try {
+                        if (CLOUD_ON) {
+                            const uname = this.loginForm.username.trim().toLowerCase();
+                            const cu = USERS.find(x => x.username === uname);
+                            if (!cu) { this.loginError = 'Username atau kata sandi salah.'; return; }
+                            await fbApi.signIn(uname, this.loginForm.password);
+                            this.user = { username: cu.username, name: cu.name, role: cu.role };
+                            try { sessionStorage.setItem('ebl_user', cu.username); } catch (e) {}
+                            this.loginForm = { username: '', password: '' };
+                            this.activeModule = 0;
+                            this.$nextTick(() => this.cloudAfterLogin());
+                            return;
+                        }
                         const hash = await sha256(this.loginForm.password);
                         const u = USERS.find(x => x.username === this.loginForm.username.trim().toLowerCase() && x.hash === hash);
                         if (!u) { this.loginError = 'Username atau kata sandi salah.'; return; }
-                        if (u.role !== (this.entry === 'viewer' ? 'viewer' : 'admin')) {
-                            this.loginError = 'Akun ini bukan akun ' + (this.entry === 'viewer' ? 'Viewer' : 'User') + '. Kembali ke halaman depan dan pilih jenis akses yang sesuai.';
-                            return;
-                        }
                         this.user = { username: u.username, name: u.name, role: u.role };
                         try { sessionStorage.setItem('ebl_user', u.username); } catch (e) {}
                         this.loginForm = { username: '', password: '' };
                         this.activeModule = 0;
                     } catch (e) {
-                        this.loginError = 'Login membutuhkan koneksi aman (https).';
+                        this.loginError = CLOUD_ON ? (e.message || 'Login gagal.') : 'Login membutuhkan koneksi aman (https).';
                     } finally { this.loginBusy = false; }
                 },
 
                 logout() {
                     this.user = null;
                     this.entry = null;
-                    this.showUploadModal = this.showReviewModal = this.showInfoModal = this.showEditModal = this.showApprovalModal = this.showFindingModal = this.showFindingReview = false;
+                    this.showUploadModal = this.showReviewModal = this.showInfoModal = this.showEditModal = this.showApprovalModal = this.showFindingModal = this.showFindingReview = this.showEvidence = this.showDataModal = false;
                     this.closeDetail();
                     try { sessionStorage.removeItem('ebl_user'); } catch (e) {}
+                    if (CLOUD_ON) fbApi.signOut();
                 },
 
                 enterViewer() {
@@ -1169,10 +1377,11 @@
                 },
 
                 submitNewDocument() {
-                    if (!this.isAdmin || !this.newDoc.code || !this.newDoc.title) return;
+                    if (!this.canAdd || !this.newDoc.code || !this.newDoc.title) return;
                     const spUrlNew = (this.newDoc.spUrl || '').trim();
                     if (!/^https:\/\//i.test(spUrlNew)) { alert('Tempel link SharePoint dokumen (harus diawali https://).'); return; }
                     const mid = parseInt(this.newDoc.moduleId);
+                    if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(mid)) { alert('Akun departemen hanya dapat menambah dokumen di folder dokumen departemen.'); return; }
                     const isDept = mid === 11 || mid === 12;
                     if (isDept && (!this.newDoc.dept || !this.newDoc.docType)) { alert('Pilih departemen dan kategori dokumen.'); return; }
                     const today = new Date().toISOString().split('T')[0];
@@ -1199,6 +1408,236 @@
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
+                // ---------- Data publik (data.json) dan draft di browser ----------
+                async loadData() {
+                    const clone = o => JSON.parse(JSON.stringify(o));
+                    let pub = { documents: clone(this.documents), findings: [] };
+                    this.dataSource = 'contoh';
+                    try {
+                        const r = await fetch('data.json?t=' + Date.now(), { cache: 'no-store' });
+                        if (r.ok) {
+                            const j = await r.json();
+                            if (Array.isArray(j.documents) && Array.isArray(j.findings)) { pub = { documents: j.documents, findings: j.findings }; this.dataSource = 'publik'; }
+                        }
+                    } catch (e) {}
+                    published = { documents: pub.documents, findings: pub.findings, sig: canon({ documents: pub.documents, findings: pub.findings }) };
+                    let ld = null, lf = null;
+                    try { ld = JSON.parse(localStorage.getItem('ebl_docs_v1')); lf = JSON.parse(localStorage.getItem('ebl_findings_v1')); } catch (e) {}
+                    let use = pub;
+                    if (Array.isArray(ld) || Array.isArray(lf)) {
+                        const draft = { documents: Array.isArray(ld) ? ld : [], findings: Array.isArray(lf) ? lf : [] };
+                        if (canon(draft) === published.sig) {
+                            try { ['ebl_docs_v1', 'ebl_findings_v1', 'ebl_base_sig'].forEach(k => localStorage.removeItem(k)); } catch (e) {}
+                        } else {
+                            use = draft;
+                            let base = null;
+                            try { base = localStorage.getItem('ebl_base_sig'); } catch (e) {}
+                            this.staleDraft = !!base && base !== published.sig;
+                        }
+                    }
+                    this.documents = clone(use.documents);
+                    this.findings = clone(use.findings);
+                    this.dataReady = true;
+                    this.recomputeDirty();
+                },
+                recomputeDirty() { this.dirty = !!published && canon({ documents: this.documents, findings: this.findings }) !== published.sig; },
+                persistDraft() {
+                    if (CLOUD_ON || !this.dataReady) return;
+                    this.recomputeDirty();
+                    try {
+                        if (this.dirty) {
+                            localStorage.setItem('ebl_docs_v1', JSON.stringify(this.documents));
+                            localStorage.setItem('ebl_findings_v1', JSON.stringify(this.findings));
+                            if (!localStorage.getItem('ebl_base_sig')) localStorage.setItem('ebl_base_sig', published.sig);
+                        } else {
+                            ['ebl_docs_v1', 'ebl_findings_v1', 'ebl_base_sig'].forEach(k => localStorage.removeItem(k));
+                            this.staleDraft = false;
+                        }
+                    } catch (e) {}
+                },
+                buildExport() {
+                    return { version: 1, exportedAt: new Date().toISOString(), exportedBy: this.user ? this.user.name : '', documents: JSON.parse(JSON.stringify(this.documents)), findings: JSON.parse(JSON.stringify(this.findings)) };
+                },
+                exportData() {
+                    if (!(this.isAdmin || this.isDeptUser)) return;
+                    const blob = new Blob([JSON.stringify(this.buildExport(), null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = this.isAdmin ? 'data.json' : 'perubahan-departemen.json';
+                    document.body.appendChild(a); a.click(); a.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    this.dataMsg = this.isAdmin ? 'data.json terunduh. Unggah ke GitHub untuk mempublikasikan.' : 'perubahan-departemen.json terunduh. Kirim ke Document Controller.';
+                },
+                async importData(ev) {
+                    const file = ev.target.files && ev.target.files[0];
+                    ev.target.value = '';
+                    if (!this.isAdmin || !file) return;
+                    try {
+                        const j = JSON.parse(await file.text());
+                        if (!Array.isArray(j.documents) || !Array.isArray(j.findings)) throw new Error('format');
+                        const plan = {};
+                        for (const key of ['documents', 'findings']) {
+                            const byId = new Map(this[key].map(x => [x.id, x]));
+                            plan[key] = { add: [], change: [] };
+                            j[key].forEach(r => {
+                                const ex = byId.get(r.id);
+                                if (!ex) plan[key].add.push(r);
+                                else if (canon(ex) !== canon(r)) plan[key].change.push([ex, r]);
+                            });
+                        }
+                        const nAdd = plan.documents.add.length + plan.findings.add.length, nChg = plan.documents.change.length + plan.findings.change.length;
+                        if (!nAdd && !nChg) { this.dataMsg = 'Tidak ada perbedaan. Data di berkas sudah sama dengan data di browser ini.'; return; }
+                        if (!confirm('Gabungkan perubahan dari berkas?\n\nDokumen baru: ' + plan.documents.add.length + '\nDokumen berubah: ' + plan.documents.change.length + '\nTemuan baru: ' + plan.findings.add.length + '\nTemuan berubah: ' + plan.findings.change.length + '\n\nData dari berkas menggantikan data yang sama di browser ini.')) return;
+                        for (const key of ['documents', 'findings']) {
+                            plan[key].change.forEach(([ex, r]) => { Object.keys(ex).forEach(k => { if (!(k in r)) delete ex[k]; }); Object.assign(ex, r); });
+                            plan[key].add.forEach(r => key === 'documents' ? this.documents.unshift(r) : this.findings.push(r));
+                        }
+                        this.dataMsg = 'Selesai digabung: ' + nAdd + ' data baru, ' + nChg + ' data diperbarui.';
+                    } catch (e) { this.dataMsg = 'Berkas tidak valid. Gunakan berkas JSON hasil ekspor aplikasi ini.'; }
+                },
+                discardDraft() {
+                    if (!published) return;
+                    if (!confirm('Buang semua perubahan di browser ini dan ikuti data terbaru dari website?')) return;
+                    this.documents = JSON.parse(JSON.stringify(published.documents));
+                    this.findings = JSON.parse(JSON.stringify(published.findings));
+                    this.staleDraft = false;
+                    this.persistDraft();
+                    this.dataMsg = 'Perubahan di browser ini dibuang. Data mengikuti website.';
+                },
+
+                // ---------- Sinkronisasi realtime (Firebase) ----------
+                get syncLabel() {
+                    return { ok: this.streamUp ? 'Realtime' : 'Tersinkron ' + this.syncAt, loading: 'Menyinkronkan...', saving: 'Menyimpan...', error: 'Gagal sinkron, ketuk untuk coba lagi', local: 'Mode lokal' }[this.syncState] || '';
+                },
+                anyModalOpen() { return this.showUploadModal || this.showEditModal || this.showReviewModal || this.showApprovalModal || this.showFindingModal || this.showFindingReview || this.showEvidence; },
+                applyRemote(key, rows) {
+                    const cur = this[key], byId = new Map(cur.map(x => [x.id, x]));
+                    const next = rows.map(r => {
+                        const ex = byId.get(r.id);
+                        if (!ex) return r;
+                        Object.keys(ex).forEach(k => { if (!(k in r)) delete ex[k]; });
+                        Object.assign(ex, r);
+                        return ex;
+                    });
+                    if (key === 'documents') next.sort((a, b) => b.id - a.id);
+                    snapshot[key] = new Map(next.map(x => [x.id, canon(x)]));
+                    const same = next.length === cur.length && next.every((x, i) => x === cur[i]);
+                    if (!same) this[key] = next;
+                },
+                cloudApplyRows(d, f, force) {
+                    if (this.pushing || this.pendingPush || (!force && this.anyModalOpen())) { this.remoteWaiting = true; return; }
+                    const changed = d.length !== snapshot.documents.size || f.length !== snapshot.findings.size
+                        || d.some(r => snapshot.documents.get(r.id) !== canon(r)) || f.some(r => snapshot.findings.get(r.id) !== canon(r));
+                    if (changed) { this.applyRemote('documents', d); this.applyRemote('findings', f); }
+                    this.remoteWaiting = false;
+                    this.syncState = 'ok';
+                    this.syncMsg = '';
+                    this.syncAt = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                },
+                async cloudPull(force) {
+                    if (!CLOUD_ON || this.pushing || this.pendingPush) return;
+                    try {
+                        if (this.syncState !== 'ok') this.syncState = 'loading';
+                        rawRoot = await fbApi.readAll();
+                        this.cloudApplyRows(fbRows(rawRoot, 'documents'), fbRows(rawRoot, 'findings'), force);
+                    } catch (e) { this.syncState = 'error'; this.syncMsg = e.message; }
+                },
+                cloudTick() {
+                    if (!CLOUD_ON) return;
+                    if (this.remoteWaiting) this.cloudApplyRows(fbRows(rawRoot, 'documents'), fbRows(rawRoot, 'findings'));
+                    if (this.streamUp && Date.now() - this.lastEvent > 70000 && this._ctrl) this._ctrl.abort();   // aliran macet: sambung ulang
+                    if (!this.streamUp && !this.pushing && !this.pendingPush && Date.now() - (this._lastPoll || 0) > 10000) { this._lastPoll = Date.now(); this.cloudPull(false); }   // cadangan jika aliran realtime diblokir jaringan
+                },
+                cloudSseBlock(block) {
+                    this.lastEvent = Date.now();
+                    let ev = '', data = '';
+                    block.split('\n').forEach(l => { if (l.startsWith('event:')) ev = l.slice(6).trim(); else if (l.startsWith('data:')) data += l.slice(5).trim(); });
+                    if (ev === 'cancel' || ev === 'auth_revoked') { if (this._ctrl) this._ctrl.abort(); return; }
+                    if (ev !== 'put' && ev !== 'patch') return;
+                    let m;
+                    try { m = JSON.parse(data); } catch (e) { return; }
+                    const parts = String(m.path || '/').split('/').filter(Boolean);
+                    if (ev === 'put') rawRoot = fbSet(rawRoot, parts, m.data === undefined ? null : m.data);
+                    else if (m.data && typeof m.data === 'object') Object.entries(m.data).forEach(([k, v]) => { rawRoot = fbSet(rawRoot, parts.concat(k), v); });
+                    this.cloudApplyRows(fbRows(rawRoot, 'documents'), fbRows(rawRoot, 'findings'));
+                },
+                async cloudStream() {
+                    if (!CLOUD_ON || this._streaming) return;
+                    this._streaming = true;
+                    let wait = 1000;
+                    while (!this._stop) {
+                        try {
+                            this._ctrl = new AbortController();
+                            const r = await fetch(fbApi.base() + '/.json', { headers: { Accept: 'text/event-stream' }, signal: this._ctrl.signal });
+                            if (!r.ok || !r.body) throw new Error('stream');
+                            this.streamUp = true;
+                            this.lastEvent = Date.now();
+                            wait = 1000;
+                            const reader = r.body.getReader(), dec = new TextDecoder();
+                            let buf = '';
+                            for (;;) {
+                                const { done, value } = await reader.read();
+                                if (done) break;
+                                buf += dec.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+                                let i;
+                                while ((i = buf.indexOf('\n\n')) >= 0) { const block = buf.slice(0, i); buf = buf.slice(i + 2); this.cloudSseBlock(block); }
+                            }
+                        } catch (e) {}
+                        this.streamUp = false;
+                        if (this._stop) break;
+                        await new Promise(res => setTimeout(res, wait));
+                        wait = Math.min(wait * 2, 30000);
+                    }
+                    this._streaming = false;
+                },
+                cloudStop() { this._stop = true; if (this._ctrl) this._ctrl.abort(); clearTimeout(this._pushTimer); clearTimeout(this._retryTimer); },
+                schedulePush() {
+                    if (!CLOUD_ON || !(this.isAdmin || this.isDeptUser)) return;
+                    const dirty = ['documents', 'findings'].some(k => this[k].length !== snapshot[k].size || this[k].some(x => snapshot[k].get(x.id) !== canon(x)));
+                    if (!dirty) return;
+                    this.pendingPush = true;
+                    clearTimeout(this._pushTimer);
+                    this._pushTimer = setTimeout(() => this.cloudPush(), 400);
+                },
+                async cloudPush() {
+                    if (this.pushing) { this.schedulePush(); return; }
+                    this.pushing = true;
+                    this.syncState = 'saving';
+                    try {
+                        for (const key of ['documents', 'findings']) {
+                            const snap = snapshot[key];
+                            const cur = new Map(this[key].map(x => [x.id, canon(x)]));
+                            const upserts = this[key].filter(x => snap.get(x.id) !== cur.get(x.id)).map(x => ({ id: x.id, node: fbNode(key, JSON.parse(JSON.stringify(x))) }));
+                            const removed = [...snap.keys()].filter(id => !cur.has(id));
+                            if (upserts.length || removed.length) await fbApi.commit(key, upserts, removed);
+                            snapshot[key] = cur;
+                        }
+                        this.pendingPush = false;
+                        this.syncState = 'ok';
+                        this.syncMsg = '';
+                        this.syncAt = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    } catch (e) {
+                        this.syncState = 'error';
+                        this.syncMsg = e.message;
+                        clearTimeout(this._retryTimer);
+                        this._retryTimer = setTimeout(() => { this.pendingPush = false; this.schedulePush(); }, 8000);
+                    } finally { this.pushing = false; }
+                },
+                async cloudAfterLogin() {
+                    await this.cloudPull(true);
+                    if (!this.isAdmin || this.importAsked || this.syncState !== 'ok' || this.documents.length || this.findings.length) return;
+                    this.importAsked = true;
+                    let ld = [], lf = [];
+                    try { ld = JSON.parse(localStorage.getItem('ebl_docs_v1') || '[]'); lf = JSON.parse(localStorage.getItem('ebl_findings_v1') || '[]'); } catch (e) {}
+                    if (!Array.isArray(ld)) ld = []; if (!Array.isArray(lf)) lf = [];
+                    if ((ld.length || lf.length) && confirm('Data di server masih kosong. Impor ' + ld.length + ' dokumen dan ' + lf.length + ' temuan yang tersimpan di browser ini?')) {
+                        this.documents = ld;
+                        this.findings = lf;
+                        this.schedulePush();
+                    }
+                },
+
                 goModule(id) {
                     this.activeModule = id;
                     this.selectedFilterIso = '';
@@ -1220,8 +1659,9 @@
                         && (!t || d.docType === t)).length;
                 },
                 openAdd() {
-                    if (!this.isAdmin) return;
+                    if (!this.canAdd) return;
                     if (this.activeModule > 0 && !this.isFindings) this.newDoc.moduleId = this.activeModule;
+                    if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(parseInt(this.newDoc.moduleId))) this.newDoc.moduleId = DEPT_EDIT_FOLDERS[0];
                     this.newDoc.dept = (this.isDeptFolder && this.activeDept && this.activeDept !== '__none') ? this.activeDept : '';
                     this.newDoc.docType = this.isDeptFolder ? this.activeType : '';
                     this.showUploadModal = true;
@@ -1333,7 +1773,7 @@
                 },
 
                 openEdit(doc) {
-                    if (!this.isAdmin) return;
+                    if (!this.canEdit(doc)) return;
                     this.editDoc = doc;
                     this.editForm = { moduleId: doc.moduleId, code: doc.code, title: doc.title, version: doc.version, iso: [...doc.iso], status: doc.status, note: '', spUrl: doc.spUrl || '', dept: doc.dept || '', docType: doc.docType || '' };
                     this.editError = '';
@@ -1342,12 +1782,14 @@
                 },
 
                 submitEdit() {
-                    if (!this.isAdmin || !this.editDoc) return;
+                    if (!this.editDoc || !this.canEdit(this.editDoc)) return;
                     const d = this.editDoc, f = this.editForm;
                     const code = f.code.trim(), title = f.title.trim(), version = f.version.trim(), spUrl = (f.spUrl || '').trim();
                     const iso = [...f.iso].sort().join(', ');
                     const moduleId = parseInt(f.moduleId);
                     const isDept = moduleId === 11 || moduleId === 12;
+                    if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(moduleId)) { this.editError = 'Akun departemen hanya dapat memindahkan dokumen di folder dokumen departemen.'; return; }
+                    const newStatus = this.isAdmin ? f.status : 'In Review';
                     const dept = isDept ? f.dept : '', docType = isDept ? f.docType : '';
                     if (isDept && (!dept || !docType)) { this.editError = 'Pilih departemen dan kategori dokumen.'; return; }
                     if (!/^https:\/\//i.test(spUrl)) { this.editError = 'Link SharePoint wajib diisi dan diawali https://'; return; }
@@ -1357,7 +1799,7 @@
                     if (title !== d.title) changes.push('Judul dokumen diubah');
                     if (version !== d.version) changes.push('Versi: ' + d.version + ' menjadi ' + version);
                     if (iso !== [...d.iso].sort().join(', ')) changes.push('Cakupan standar menjadi ISO ' + (iso || '-'));
-                    if (f.status !== d.status) changes.push('Status: ' + d.status + ' menjadi ' + f.status);
+                    if (newStatus !== d.status) changes.push('Status: ' + d.status + ' menjadi ' + newStatus);
                     if (moduleId !== d.moduleId) changes.push('Dipindahkan ke folder ' + this.folderName(moduleId));
                     if (dept !== (d.dept || '')) changes.push('Departemen: ' + (d.dept || '-') + ' menjadi ' + (dept || '-'));
                     if (docType !== (d.docType || '')) changes.push('Kategori: ' + (d.docType || '-') + ' menjadi ' + (docType || '-'));
@@ -1370,7 +1812,7 @@
 
                     const today = new Date().toISOString().split('T')[0];
                     d.rev = (d.rev || 0) + 1;
-                    Object.assign(d, { code, title, version, iso: [...f.iso], status: f.status, moduleId, updatedAt: today, spUrl, dept, docType });
+                    Object.assign(d, { code, title, version, iso: [...f.iso], status: newStatus, moduleId, updatedAt: today, spUrl, dept, docType });
                     d.history.push({ rev: d.rev, spUrl: spChanged ? spUrl : '', version, date: today, by: this.user.name, note: f.note.trim(), changes });
                     this.showEditModal = false;
                     this.editDoc = null;
@@ -1396,23 +1838,29 @@
                 },
 
                 init() {
-                    try {
-                        const raw = localStorage.getItem('ebl_docs_v1');
-                        if (raw) {
-                            const saved = JSON.parse(raw);
-                            if (Array.isArray(saved)) this.documents = saved;
-                        }
-                    } catch (e) {}
-                    try { const rawF = localStorage.getItem('ebl_findings_v1'); if (rawF) { const sf = JSON.parse(rawF); if (Array.isArray(sf)) this.findings = sf; } } catch (e) {}
-                    this.$watch('findings', v => { try { localStorage.setItem('ebl_findings_v1', JSON.stringify(v)); } catch (e) {} });
+                    if (CLOUD_ON) { this.documents = []; this.findings = []; } else this.loadData();
                     ['activeDept', 'activeType', 'auditTab', 'findings', 'showDeptGrid', 'activeModule'].forEach(k => this.$watch(k, () => this.$nextTick(() => { lucide.createIcons(); })));
-                    this.$watch('documents', v => { try { localStorage.setItem('ebl_docs_v1', JSON.stringify(v)); } catch (e) {} });
+                    if (!CLOUD_ON) { this.$watch('documents', () => this.persistDraft()); this.$watch('findings', () => this.persistDraft()); }
                     try {
                         const key = sessionStorage.getItem('ebl_user');
                         if (key === 'viewer') this.user = { username: 'viewer', name: 'Viewer', role: 'viewer' };
                         const saved = USERS.find(x => x.username === key);
                         if (saved) this.user = { username: saved.username, name: saved.name, role: saved.role };
                     } catch (e) {}
+                    if (CLOUD_ON) {
+                        const cs = fbApi.loadSession();
+                        const su = cs && USERS.find(x => x.username === cs.username);
+                        if (su) this.user = { username: su.username, name: su.name, role: su.role };
+                        else if (this.user && this.user.role !== 'viewer') this.user = null;   // sesi login habis
+                        this.$watch('documents', () => this.schedulePush());
+                        this.$watch('findings', () => this.schedulePush());
+                        this.cloudPull(true);
+                        this.cloudStream();
+                        setInterval(() => this.cloudTick(), 1500);
+                        setInterval(() => this.cloudPull(false), 300000);
+                        document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.cloudPull(false); if (!this.streamUp && this._ctrl) this._ctrl.abort(); } });
+                        window.addEventListener('beforeunload', e => { if (this.pendingPush) { e.preventDefault(); e.returnValue = ''; } });
+                    }
                     this.$watch('user', () => this.$nextTick(() => { lucide.createIcons(); }));
                     this.$watch('entry', () => this.$nextTick(() => { lucide.createIcons(); }));
                     this.$nextTick(() => { lucide.createIcons(); });
