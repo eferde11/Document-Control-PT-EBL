@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Buat Hash Kata Sandi - Document Control EBL</title>
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #F5F6F2; color: #262B27; line-height: 1.5; }
+    main { max-width: 640px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { font-size: 22px; margin: 0 0 4px; color: #0B1F4D; }
+    .sub { margin: 0 0 24px; color: #6B7268; font-size: 14px; }
+    .card { background: #fff; border: 1px solid #DDE0D8; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    label { display: block; font-weight: 600; font-size: 13px; margin: 0 0 6px; }
+    select, input { width: 100%; padding: 10px 12px; border: 1px solid #C3C8BE; border-radius: 8px; font-size: 15px; font-family: inherit; margin-bottom: 14px; background: #fff; }
+    input:focus, select:focus, button:focus-visible { outline: 2px solid #C8902E; outline-offset: 2px; }
+    .row { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: -6px 0 14px; }
+    .row input { width: auto; margin: 0; }
+    button { background: #1B3A82; color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #0B1F4D; }
+    button.ghost { background: #fff; color: #1B3A82; border: 1px solid #1B3A82; }
+    pre { background: #111512; color: #D5E8E1; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 6px 0 12px; }
+    .muted { color: #6B7268; font-size: 13px; }
+    .warn { background: #FFF8E1; border: 1px solid #F0D58A; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+    .err { color: #B3261E; font-weight: 600; font-size: 13px; }
+    ol { padding-left: 20px; font-size: 14px; }
+    code { background: #ECEEE8; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+    <h1>Buat hash kata sandi</h1>
+    <p class="sub">Document Control PT Energi Batubara Lestari, untuk mode lokal</p>
+
+    <div class="card">
+        <label for="u">Akun</label>
+        <select id="u">
+            <option value="docoebl">docoebl (Document Controller)</option>
+            <option value="dept">dept (Departemen)</option>
+            <option value="viewer">viewer (Viewer)</option>
+        </select>
+
+        <label for="p">Kata sandi baru</label>
+        <input id="p" type="password" autocomplete="new-password" placeholder="Minimal 6 karakter">
+        <div class="row"><input id="show" type="checkbox"><label for="show" style="margin:0;font-weight:400">Tampilkan kata sandi</label></div>
+
+        <button id="go" type="button">Buat hash</button>
+        <p id="err" class="err" hidden></p>
+    </div>
+
+    <div class="card" id="out" hidden>
+        <label>Hash</label>
+        <pre id="hash"></pre>
+        <button class="ghost" type="button" id="copy">Salin hash</button>
+        <span id="copied" class="muted" hidden> Tersalin.</span>
+
+        <p style="margin:18px 0 6px;font-weight:600;font-size:13px">Cara memakai</p>
+        <ol>
+            <li>Buka <code>config.js</code> di repositori GitHub, klik ikon pensil.</li>
+            <li>Pada baris akun <code id="who"></code>, ganti isi <code>hash: '...'</code> dengan hash di atas.</li>
+            <li>Klik <strong>Commit changes</strong>. Tunggu 1 sampai 2 menit, lalu muat ulang website dengan Ctrl+Shift+R.</li>
+        </ol>
+    </div>
+
+    <p class="warn">Kata sandi diproses di browser ini saja dan tidak dikirim ke mana pun. Halaman ini hanya berlaku untuk mode lokal. Pada mode realtime, ganti kata sandi di Firebase Console, menu Authentication.</p>
+</main>
+<script>
+    const $ = id => document.getElementById(id);
+    // Harus sama dengan rumus di index.html: SHA-256 dari 'ebl:' + kata sandi
+    const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ebl:' + t)))].map(x => x.toString(16).padStart(2, '0')).join('');
+    $('show').addEventListener('change', e => { $('p').type = e.target.checked ? 'text' : 'password'; });
+    const run = async () => {
+        const pw = $('p').value;
+        $('err').hidden = true; $('out').hidden = true; $('copied').hidden = true;
+        if (pw.length < 6) { $('err').textContent = 'Kata sandi minimal 6 karakter.'; $('err').hidden = false; return; }
+        if (pw !== pw.trim()) { $('err').textContent = 'Kata sandi diawali atau diakhiri spasi. Hapus spasinya dulu.'; $('err').hidden = false; return; }
+        if (!(window.crypto && crypto.subtle)) { $('err').textContent = 'Browser ini tidak mendukung. Buka halaman ini lewat https atau langsung dari file di komputer.'; $('err').hidden = false; return; }
+        $('hash').textContent = await sha256(pw);
+        $('who').textContent = $('u').value;
+        $('out').hidden = false;
+    };
+    $('go').addEventListener('click', run);
+    $('p').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+    $('copy').addEventListener('click', async () => {
+        const t = $('hash').textContent;
+        try { await navigator.clipboard.writeText(t); }
+        catch (e) { const r = document.createRange(); r.selectNodeContents($('hash')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); }
+        $('copied').hidden = false;
+    });
+</script>
+</body>
+</html>
