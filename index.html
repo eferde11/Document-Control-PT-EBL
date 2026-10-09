@@ -375,8 +375,9 @@
                                                 <span x-show="isOverdue(x)" class="block text-[10px] font-semibold text-rose-600">Terlambat</span>
                                             </td>
                                             <td class="p-4">
-                                                <a x-show="x.buktiUrl && canOpenSp" :href="safeUrl(x.buktiUrl)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Lihat bukti</a>
-                                                <span x-show="!x.buktiUrl" class="text-slate-400 text-xs">Belum ada bukti</span>
+                                                <button x-show="x.buktiFile && canOpenSp" @click="openFile(x.buktiFile)" :disabled="!!fileBusy" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition disabled:opacity-60"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span x-text="x.buktiFile && fileBusy === x.buktiFile.id ? 'Memuat...' : 'Lihat bukti'"></span></button>
+                                                <a x-show="!x.buktiFile && x.buktiUrl && canOpenSp" :href="safeUrl(x.buktiUrl)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Lihat bukti</a>
+                                                <span x-show="!x.buktiUrl && !x.buktiFile" class="text-slate-400 text-xs">Belum ada bukti</span>
                                                 <p x-show="x.buktiNote" class="text-[11px] text-slate-500 mt-1 max-w-[220px]" x-text="x.buktiNote"></p>
                                                 <p x-show="x.buktiDate" class="text-[10px] text-slate-400 mt-1" x-text="'Diperbarui ' + x.buktiDate + ' oleh ' + x.buktiBy"></p>
                                             </td>
@@ -533,7 +534,8 @@
                                                 <button x-show="isAdmin" @click="openReview(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition" title="Review Dokumen">
                                                     <i data-lucide="clipboard-check" class="w-4 h-4"></i> Review
                                                 </button>
-                                                <a x-show="doc.spUrl && canOpenSp" :href="safeUrl(doc.spUrl)" target="_blank" rel="noopener noreferrer" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition" title="Buka dokumen di SharePoint"><i data-lucide="external-link" class="w-4 h-4"></i> Buka</a>
+                                                <button x-show="doc.file && canOpenSp" @click="openFile(doc.file)" :disabled="!!fileBusy" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition disabled:opacity-60" title="Buka dokumen"><i data-lucide="file-text" class="w-4 h-4"></i> <span x-text="doc.file && fileBusy === doc.file.id ? 'Memuat...' : 'Buka'"></span></button>
+                                                <a x-show="!doc.file && doc.spUrl && canOpenSp" :href="safeUrl(doc.spUrl)" target="_blank" rel="noopener noreferrer" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition" title="Buka dokumen di SharePoint"><i data-lucide="external-link" class="w-4 h-4"></i> Buka</a>
                                                 <button x-show="isAdmin" @click="openApproval(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-ochre-600/50 text-ochre-600 text-xs font-semibold hover:bg-ochre-500 hover:text-slate-950 transition" title="Approval dokumen"><i data-lucide="badge-check" class="w-4 h-4"></i> Approval</button>
                                                 <button x-show="canEdit(doc)" @click="openEdit(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen">
                                                     <i data-lucide="pencil" class="w-4 h-4"></i>
@@ -637,14 +639,19 @@
                         </label>
                     </div>
                 </div>
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Link Dokumen di SharePoint</label>
-                    <input type="url" x-model="newDoc.spUrl" required placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <p class="text-slate-400 mt-1">Unggah file ke SharePoint, lalu salin link berbagi file tersebut dan tempel di sini.</p>
+                <div x-show="cloudOn">
+                    <label class="block font-semibold text-slate-700 mb-1">File Dokumen</label>
+                    <input type="file" x-ref="newDocFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" class="block w-full text-slate-600 border rounded-lg p-2 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold hover:file:bg-slate-200">
+                    <p class="text-slate-400 mt-1" x-text="'PDF, Word, Excel, PowerPoint, PNG, atau JPG. Maksimal ' + fileMaxMb + ' MB.'"></p>
+                </div>
+                <div x-show="!cloudOn">
+                    <label class="block font-semibold text-slate-700 mb-1">Link Dokumen</label>
+                    <input type="url" x-model="newDoc.spUrl" :required="!cloudOn" :disabled="cloudOn" placeholder="https://..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-slate-400 mt-1">Unggah file langsung hanya tersedia pada mode realtime. Pada mode lokal, tempel link berbagi file di sini.</p>
                 </div>
                 <div class="pt-4 flex justify-end gap-2 border-t">
-                    <button type="button" @click="showUploadModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Dokumen</button>
+                    <button type="button" @click="showUploadModal = false" :disabled="uploadBusy" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium disabled:opacity-50">Batal</button>
+                    <button type="submit" :disabled="uploadBusy" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm disabled:opacity-60" x-text="uploadBusy ? 'Mengunggah ' + uploadPct + '%' : 'Simpan Dokumen'">Simpan Dokumen</button>
                 </div>
             </form>
         </div>
@@ -734,14 +741,18 @@
                                     <ul class="list-disc pl-4 text-slate-500 mt-1" x-show="h.changes && h.changes.length">
                                         <template x-for="c in h.changes"><li x-text="c"></li></template>
                                     </ul>
-                                    <a x-show="h.spUrl && canOpenSp" :href="safeUrl(h.spUrl)" target="_blank" rel="noopener noreferrer" class="mt-1 mr-3 text-sky-700 font-semibold inline-flex items-center gap-1"><i data-lucide="external-link" class="w-3 h-3"></i> Buka file revisi ini di SharePoint</a>
+                                    <button type="button" x-show="h.file && canOpenSp" @click="openFile(h.file)" :disabled="!!fileBusy" class="mt-1 mr-3 text-sky-700 font-semibold inline-flex items-center gap-1 disabled:opacity-60"><i data-lucide="file-text" class="w-3 h-3"></i> <span x-text="h.file ? 'Buka file revisi ini (' + h.file.name + ')' : ''"></span></button>
+                                    <a x-show="!h.file && h.spUrl && canOpenSp" :href="safeUrl(h.spUrl)" target="_blank" rel="noopener noreferrer" class="mt-1 mr-3 text-sky-700 font-semibold inline-flex items-center gap-1"><i data-lucide="external-link" class="w-3 h-3"></i> Buka file revisi ini</a>
                                     </li>
                             </template>
                         </ol>
                     </div>
-                    <p x-show="!detailDoc.spUrl" class="p-4 bg-slate-50 border border-dashed rounded-lg text-slate-500 text-center">Dokumen ini belum memiliki link SharePoint. Admin dapat menambahkannya lewat tombol edit.</p>
+                    <p x-show="!detailDoc.spUrl && !detailDoc.file" class="p-4 bg-slate-50 border border-dashed rounded-lg text-slate-500 text-center">Dokumen ini belum memiliki file. Admin dapat mengunggahnya lewat tombol edit.</p>
+                    <p x-show="detailDoc.file" class="text-slate-500 flex items-center gap-1.5"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i> <span x-text="detailDoc.file ? detailDoc.file.name + ' · ' + fmtSize(detailDoc.file.size) : ''"></span></p>
                     <div class="pt-4 border-t flex justify-end gap-2">
-                        <a x-show="detailDoc.spUrl && canOpenSp" :href="safeUrl(detailDoc.spUrl)" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2"><i data-lucide="external-link" class="w-4 h-4"></i> Buka dokumen di SharePoint</a>
+                        <button type="button" x-show="detailDoc.file && canOpenSp" @click="openFile(detailDoc.file, true)" :disabled="!!fileBusy" class="px-4 py-2 border border-sky-600 text-sky-700 hover:bg-sky-50 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
+                        <button type="button" x-show="detailDoc.file && canOpenSp" @click="openFile(detailDoc.file)" :disabled="!!fileBusy" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="file-text" class="w-4 h-4"></i> <span x-text="fileBusy ? 'Memuat...' : 'Buka dokumen'"></span></button>
+                        <a x-show="!detailDoc.file && detailDoc.spUrl && canOpenSp" :href="safeUrl(detailDoc.spUrl)" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2"><i data-lucide="external-link" class="w-4 h-4"></i> Buka dokumen</a>
                         <button @click="closeDetail()" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-semibold">Tutup</button>
                     </div>
                 </div>
@@ -812,10 +823,15 @@
                         <option value="Obsolete">Obsolete</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Link Dokumen di SharePoint</label>
-                    <input type="url" x-model="editForm.spUrl" required placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <p class="text-slate-400 mt-1">Untuk revisi baru, unggah file revisi ke SharePoint lalu tempel link terbarunya di sini.</p>
+                <div x-show="cloudOn">
+                    <label class="block font-semibold text-slate-700 mb-1">File Revisi (opsional)</label>
+                    <input type="file" x-ref="editDocFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" class="block w-full text-slate-600 border rounded-lg p-2 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold hover:file:bg-slate-200">
+                    <p class="text-slate-400 mt-1" x-text="(editDoc && editDoc.file ? 'File saat ini: ' + editDoc.file.name + '. ' : '') + 'Pilih file hanya jika isi dokumen direvisi. Maksimal ' + fileMaxMb + ' MB.'"></p>
+                </div>
+                <div x-show="!cloudOn">
+                    <label class="block font-semibold text-slate-700 mb-1">Link Dokumen</label>
+                    <input type="url" x-model="editForm.spUrl" :required="!cloudOn" :disabled="cloudOn" placeholder="https://..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-slate-400 mt-1">Untuk revisi baru, tempel link file terbarunya di sini.</p>
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Catatan Perubahan</label>
@@ -823,8 +839,8 @@
                 </div>
                 <p x-show="editError" x-text="editError" class="text-rose-600 font-medium"></p>
                 <div class="pt-4 flex justify-end gap-2 border-t">
-                    <button type="button" @click="showEditModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Revisi</button>
+                    <button type="button" @click="showEditModal = false" :disabled="uploadBusy" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium disabled:opacity-50">Batal</button>
+                    <button type="submit" :disabled="uploadBusy" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm disabled:opacity-60" x-text="uploadBusy ? 'Mengunggah ' + uploadPct + '%' : 'Simpan Revisi'">Simpan Revisi</button>
                 </div>
             </form>
         </div>
@@ -870,9 +886,13 @@
                         <input type="date" x-model="findingForm.dueDate" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                 </div>
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Link Bukti Perbaikan di SharePoint (opsional)</label>
-                    <input type="url" x-model="findingForm.buktiUrl" placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <div x-show="cloudOn">
+                    <label class="block font-semibold text-slate-700 mb-1">File Bukti Perbaikan (opsional)</label>
+                    <input type="file" x-ref="findingFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" class="block w-full text-slate-600 border rounded-lg p-2 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold hover:file:bg-slate-200">
+                </div>
+                <div x-show="!cloudOn">
+                    <label class="block font-semibold text-slate-700 mb-1">Link Bukti Perbaikan (opsional)</label>
+                    <input type="url" x-model="findingForm.buktiUrl" :disabled="cloudOn" placeholder="https://..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Keterangan Bukti (opsional)</label>
@@ -881,7 +901,7 @@
                 <p x-show="findingError" x-text="findingError" class="text-rose-600 font-medium"></p>
                 <div class="pt-4 flex justify-end gap-2 border-t">
                     <button type="button" @click="showFindingModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Temuan</button>
+                    <button type="submit" :disabled="uploadBusy" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm disabled:opacity-60" x-text="uploadBusy ? 'Mengunggah ' + uploadPct + '%' : 'Simpan Temuan'">Simpan Temuan</button>
                 </div>
             </form>
         </div>
@@ -899,10 +919,14 @@
                     <p class="font-semibold text-slate-700" x-text="evidenceTarget ? 'Temuan No. ' + evidenceTarget.no + ' · ' + evidenceTarget.dept : ''"></p>
                     <p class="text-slate-600 mt-0.5 line-clamp-3" x-text="evidenceTarget ? evidenceTarget.temuan : ''"></p>
                 </div>
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Link Bukti Perbaikan di SharePoint</label>
-                    <input type="url" x-model="evidenceForm.buktiUrl" required placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <p class="text-slate-400 mt-1">Unggah bukti ke SharePoint, lalu salin link berbagi dan tempel di sini.</p>
+                <div x-show="cloudOn">
+                    <label class="block font-semibold text-slate-700 mb-1">File Bukti Perbaikan</label>
+                    <input type="file" x-ref="evidenceFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" class="block w-full text-slate-600 border rounded-lg p-2 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold hover:file:bg-slate-200">
+                    <p class="text-slate-400 mt-1" x-text="(evidenceTarget && evidenceTarget.buktiFile ? 'Bukti saat ini: ' + evidenceTarget.buktiFile.name + '. ' : '') + 'Foto atau dokumen, maksimal ' + fileMaxMb + ' MB.'"></p>
+                </div>
+                <div x-show="!cloudOn">
+                    <label class="block font-semibold text-slate-700 mb-1">Link Bukti Perbaikan</label>
+                    <input type="url" x-model="evidenceForm.buktiUrl" :required="!cloudOn" :disabled="cloudOn" placeholder="https://..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Keterangan Bukti</label>
@@ -912,7 +936,7 @@
                 <p x-show="evidenceError" x-text="evidenceError" class="text-rose-600 font-medium"></p>
                 <div class="pt-4 flex justify-end gap-2 border-t">
                     <button type="button" @click="showEvidence = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm">Simpan Bukti</button>
+                    <button type="submit" :disabled="uploadBusy" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm disabled:opacity-60" x-text="uploadBusy ? 'Mengunggah ' + uploadPct + '%' : 'Simpan Bukti'">Simpan Bukti</button>
                 </div>
             </form>
         </div>
@@ -1102,6 +1126,22 @@
         const canon = v => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x)) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a < b ? -1 : 1)) : x);
         const snapshot = { documents: new Map(), findings: new Map() };
         let rawRoot = {};   // salinan isi database (diperbarui oleh aliran realtime)
+        // Aliran realtime dibuka per node, supaya node /files (isi dokumen) tidak pernah ikut terunduh.
+        const STREAM_KEYS = ['documents', 'findings'];
+        const streams = { documents: { up: false, last: 0, ctrl: null }, findings: { up: false, last: 0, ctrl: null } };
+        const rawReady = { documents: false, findings: false };
+        // ---------- Unggah file dokumen (disimpan di Firebase, node /files) ----------
+        const FILE_MAX_MB = 15;                 // batas ukuran satu file. Jika diubah, sesuaikan juga firebase-rules.json
+        const FILE_CHUNK = 1048576;             // file dipotong per 1 MB saat diunggah
+        const FILE_EXT = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg'];
+        const FILE_VIEW = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };   // jenis yang aman ditampilkan langsung di tab baru
+        const fileExt = name => { const m = /\.([a-z0-9]+)$/i.exec(String(name || '')); return m ? m[1].toLowerCase() : ''; };
+        const blobToB64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = () => rej(new Error('Gagal membaca file dari perangkat.')); fr.readAsDataURL(blob); });
+        const b64ToBytes = b64 => { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+        const fileHttpError = (status, what) => new Error(
+            (status === 401 || status === 403) ? what + ' ditolak server (kode ' + status + '). Pastikan aturan terbaru dari firebase-rules.json sudah di-Publish di Firebase dan akun Anda masih login.'
+            : status === 413 ? 'File terlalu besar untuk server.'
+            : what + ' gagal (kode ' + status + '). Periksa koneksi lalu coba lagi.');
         const fbSet = (root, parts, val) => {
             if (!parts.length) return (val && typeof val === 'object') ? val : {};
             let o = root;
@@ -1147,9 +1187,56 @@
                 return j.id_token;
             },
             async readAll() {
-                const r = await fetch(this.base() + '/.json', { cache: 'no-store' });
-                if (!r.ok) throw new Error('Gagal membaca data (kode ' + r.status + ').');
-                return (await r.json()) || {};
+                const get = async key => {
+                    const r = await fetch(this.base() + '/' + key + '.json', { cache: 'no-store' });
+                    if (!r.ok) throw new Error('Gagal membaca data (kode ' + r.status + ').');
+                    return (await r.json()) || {};
+                };
+                const [documents, findings] = await Promise.all([get('documents'), get('findings')]);
+                rawReady.documents = rawReady.findings = true;
+                return { documents, findings };
+            },
+            fileUrl(id, sub, token) { return this.base() + '/files/' + encodeURIComponent(id) + (sub || '') + '.json?auth=' + encodeURIComponent(token); },
+            async uploadFile(file, moduleId, onProgress) {
+                if (!(await this.token())) throw new Error('Belum masuk. Silakan login ulang.');
+                const id = 'f' + uid().toString(36) + Math.random().toString(36).slice(2, 8);
+                const n = Math.max(1, Math.ceil(file.size / FILE_CHUNK));
+                const put = async (sub, value) => {
+                    let r;
+                    try { r = await fetch(this.fileUrl(id, sub, await this.token()), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }); }
+                    catch (e) { throw new Error('Koneksi terputus saat mengunggah. Coba lagi.'); }
+                    if (!r.ok) throw fileHttpError(r.status, 'Unggahan');
+                };
+                try {
+                    for (let i = 0; i < n; i++) {
+                        await put('/c/' + i, await blobToB64(file.slice(i * FILE_CHUNK, (i + 1) * FILE_CHUNK)));
+                        if (onProgress) onProgress(Math.round((i + 1) / n * 100));
+                    }
+                    // keterangan file ditulis terakhir: tanpa ini file dianggap belum selesai diunggah
+                    await put('/i', { n: String(file.name).slice(0, 200), s: file.size, k: n, m: Number(moduleId) || 0, d: Date.now() });
+                } catch (e) {
+                    this.deleteFile(id).catch(() => {});   // bersihkan potongan yang sudah terkirim
+                    throw e;
+                }
+                return { id, name: String(file.name).slice(0, 200), size: file.size };
+            },
+            async downloadFile(id) {
+                const t = await this.token();
+                if (!t) throw new Error('Sesi login berakhir. Silakan masuk lagi untuk membuka file.');
+                let r;
+                try { r = await fetch(this.fileUrl(id, '', t), { cache: 'no-store' }); }
+                catch (e) { throw new Error('Tidak dapat menghubungi server. Periksa koneksi internet.'); }
+                if (!r.ok) throw fileHttpError(r.status, 'Akses file');
+                const j = await r.json();
+                if (!j || !j.i || !j.c) throw new Error('File tidak ditemukan di server.');
+                const list = Array.isArray(j.c) ? j.c : Object.keys(j.c).sort((a, b) => a - b).map(k => j.c[k]);
+                if (list.length !== j.i.k || list.some(x => typeof x !== 'string')) throw new Error('File di server tidak lengkap. Minta Document Controller mengunggah ulang.');
+                return list.map(b64ToBytes);
+            },
+            async deleteFile(id) {
+                const t = await this.token();
+                if (!t) return;
+                await fetch(this.fileUrl(id, '', t), { method: 'DELETE' });
             },
             async commit(table, upserts, removed) {
                 const body = {};
@@ -1233,6 +1320,10 @@
                 pushing: false,
                 importAsked: false,
                 streamUp: false,
+                uploadBusy: false,
+                uploadPct: 0,
+                fileBusy: null,
+                fileMaxMb: FILE_MAX_MB,
                 remoteWaiting: false,
                 lastEvent: 0,
                 newDoc: {
@@ -1318,23 +1409,81 @@
                     this.evidenceTarget = f;
                     this.evidenceForm = { buktiUrl: f.buktiUrl || '', buktiNote: f.buktiNote || '' };
                     this.evidenceError = '';
+                    this.clearFile('evidenceFile');
                     this.showEvidence = true;
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
-                submitEvidence() {
+                async submitEvidence() {
                     const f = this.evidenceTarget;
-                    if (!f || !(this.isAdmin || this.isDeptUser)) return;
-                    const url = (this.evidenceForm.buktiUrl || '').trim();
-                    if (!/^https:\/\//i.test(url)) { this.evidenceError = 'Tempel link bukti perbaikan di SharePoint (harus diawali https://).'; return; }
-                    f.buktiUrl = url;
+                    if (this.uploadBusy || !f || !(this.isAdmin || this.isDeptUser)) return;
+                    let url = '', file = null;
+                    if (CLOUD_ON) {
+                        const picked = this.pickedFile('evidenceFile');
+                        if (picked) {
+                            const prob = this.fileProblem(picked);
+                            if (prob) { this.evidenceError = prob; return; }
+                            this.evidenceError = '';
+                            try { file = await this.sendFile(picked, 0); } catch (e) { this.evidenceError = e.message || 'Unggah gagal.'; return; }
+                            if (!this.user) return;
+                        } else if (!f.buktiFile && !f.buktiUrl) { this.evidenceError = 'Pilih file bukti perbaikan.'; return; }
+                    } else {
+                        url = (this.evidenceForm.buktiUrl || '').trim();
+                        if (!/^https:\/\//i.test(url)) { this.evidenceError = 'Tempel link bukti perbaikan (harus diawali https://).'; return; }
+                    }
+                    if (file) { f.buktiFile = file; f.buktiUrl = ''; }
+                    else if (!CLOUD_ON) f.buktiUrl = url;
                     f.buktiNote = (this.evidenceForm.buktiNote || '').trim();
                     f.buktiDate = new Date().toISOString().split('T')[0];
                     f.buktiBy = this.user.name;
                     if (f.reviewResult) { f.reviewResult = ''; delete f.reviewer; delete f.reviewDate; delete f.reviewNote; }   // bukti baru perlu direview ulang
                     this.showEvidence = false;
+                    this.clearFile('evidenceFile');
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
                 safeUrl(u) { return /^https:\/\//i.test(u || '') ? u : '#'; },
+
+                // ---------- File dokumen ----------
+                pickedFile(ref) { const el = this.$refs && this.$refs[ref]; return (el && el.files && el.files[0]) || null; },
+                clearFile(ref) { const el = this.$refs && this.$refs[ref]; if (el) el.value = ''; },
+                fmtSize(n) { n = Number(n) || 0; return n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; },
+                fileProblem(file) {
+                    if (!file) return 'Pilih file terlebih dahulu.';
+                    if (!FILE_EXT.includes(fileExt(file.name))) return 'Jenis file tidak didukung. Gunakan PDF, Word, Excel, PowerPoint, PNG, atau JPG.';
+                    if (!file.size) return 'File kosong, pilih file lain.';
+                    if (file.size > FILE_MAX_MB * 1048576) return 'Ukuran file ' + this.fmtSize(file.size) + ' melebihi batas ' + FILE_MAX_MB + ' MB.';
+                    return '';
+                },
+                async sendFile(file, moduleId) {
+                    this.uploadBusy = true;
+                    this.uploadPct = 0;
+                    try { return await fbApi.uploadFile(file, moduleId, pct => { this.uploadPct = pct; }); }
+                    finally { this.uploadBusy = false; }
+                },
+                async openFile(f, forceDownload) {
+                    if (!f || !f.id || this.fileBusy) return;
+                    if (!CLOUD_ON) { alert('File hanya dapat dibuka pada mode realtime.'); return; }
+                    const viewType = forceDownload ? null : FILE_VIEW[fileExt(f.name)];
+                    let w = null;
+                    if (viewType) {
+                        // tab dibuka saat klik (agar tidak diblokir browser), isinya menyusul setelah file selesai diambil
+                        try { w = window.open('', '_blank'); if (w) { w.document.title = f.name || 'Dokumen'; w.document.body.innerHTML = '<p style="font:14px system-ui,sans-serif;padding:24px;color:#475569">Memuat dokumen...</p>'; } } catch (e) { w = null; }
+                    }
+                    this.fileBusy = f.id;
+                    try {
+                        const parts = await fbApi.downloadFile(f.id);
+                        const url = URL.createObjectURL(new Blob(parts, { type: viewType || 'application/octet-stream' }));
+                        if (w && !w.closed) w.location.href = url;
+                        else { const a = document.createElement('a'); a.href = url; a.download = f.name || 'dokumen'; document.body.appendChild(a); a.click(); a.remove(); }
+                        setTimeout(() => URL.revokeObjectURL(url), 600000);
+                    } catch (e) {
+                        if (w) { try { w.close(); } catch (x) {} }
+                        alert(e.message || 'Gagal membuka file.');
+                    } finally { this.fileBusy = null; }
+                },
+                dropFiles(list) {
+                    if (!CLOUD_ON) return;
+                    [...new Set((list || []).filter(f => f && f.id).map(f => f.id))].forEach(id => fbApi.deleteFile(id).catch(() => {}));
+                },
 
                 async login() {
                     this.loginBusy = true;
@@ -1400,16 +1549,25 @@
                     return this.activeModule === 0 ? { id: 0, name: 'Semua Dokumen' } : (this.modules.find(m => m.id === this.activeModule) || {});
                 },
 
-                submitNewDocument() {
-                    if (!this.canAdd || !this.newDoc.code || !this.newDoc.title) return;
-                    const spUrlNew = (this.newDoc.spUrl || '').trim();
-                    if (!/^https:\/\//i.test(spUrlNew)) { alert('Tempel link SharePoint dokumen (harus diawali https://).'); return; }
+                async submitNewDocument() {
+                    if (this.uploadBusy || !this.canAdd || !this.newDoc.code || !this.newDoc.title) return;
                     const mid = parseInt(this.newDoc.moduleId);
                     if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(mid)) { alert('Akun departemen hanya dapat menambah dokumen di folder dokumen departemen.'); return; }
                     const isDept = mid === 11 || mid === 12;
                     if (isDept && (!this.newDoc.dept || !this.newDoc.docType)) { alert('Pilih departemen dan kategori dokumen.'); return; }
+                    let spUrlNew = '', file = null;
+                    if (CLOUD_ON) {
+                        const picked = this.pickedFile('newDocFile');
+                        const prob = this.fileProblem(picked);
+                        if (prob) { alert(prob); return; }
+                        try { file = await this.sendFile(picked, mid); } catch (e) { alert(e.message || 'Unggah gagal.'); return; }
+                        if (!this.user) return;
+                    } else {
+                        spUrlNew = (this.newDoc.spUrl || '').trim();
+                        if (!/^https:\/\//i.test(spUrlNew)) { alert('Tempel link dokumen (harus diawali https://).'); return; }
+                    }
                     const today = new Date().toISOString().split('T')[0];
-                    this.documents.unshift({
+                    const doc = {
                         id: uid(),
                         moduleId: mid,
                         dept: isDept ? this.newDoc.dept : '',
@@ -1424,11 +1582,14 @@
                         spUrl: spUrlNew,
                         rev: 0,
                         history: [{ rev: 0, spUrl: spUrlNew, version: this.newDoc.version, date: today, by: this.user.name, note: 'Dokumen pertama didaftarkan', changes: [] }]
-                    });
+                    };
+                    if (file) { doc.file = file; doc.history[0].file = { ...file }; }
+                    this.documents.unshift(doc);
                     this.showUploadModal = false;
                     this.newDoc.code = '';
                     this.newDoc.title = '';
                     this.newDoc.spUrl = '';
+                    this.clearFile('newDocFile');
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
@@ -1570,33 +1731,40 @@
                 cloudTick() {
                     if (!CLOUD_ON) return;
                     if (this.remoteWaiting) this.cloudApplyRows(fbRows(rawRoot, 'documents'), fbRows(rawRoot, 'findings'));
-                    if (this.streamUp && Date.now() - this.lastEvent > 70000 && this._ctrl) this._ctrl.abort();   // aliran macet: sambung ulang
+                    STREAM_KEYS.forEach(k => { const st = streams[k]; if (st.up && Date.now() - st.last > 70000 && st.ctrl) st.ctrl.abort(); });   // aliran macet: sambung ulang
                     if (!this.streamUp && !this.pushing && !this.pendingPush && Date.now() - (this._lastPoll || 0) > 10000) { this._lastPoll = Date.now(); this.cloudPull(false); }   // cadangan jika aliran realtime diblokir jaringan
                 },
-                cloudSseBlock(block) {
-                    this.lastEvent = Date.now();
+                cloudSseBlock(block, key) {
+                    const st = streams[key];
+                    st.last = this.lastEvent = Date.now();
                     let ev = '', data = '';
                     block.split('\n').forEach(l => { if (l.startsWith('event:')) ev = l.slice(6).trim(); else if (l.startsWith('data:')) data += l.slice(5).trim(); });
-                    if (ev === 'cancel' || ev === 'auth_revoked') { if (this._ctrl) this._ctrl.abort(); return; }
+                    if (ev === 'cancel' || ev === 'auth_revoked') { if (st.ctrl) st.ctrl.abort(); return; }
                     if (ev !== 'put' && ev !== 'patch') return;
                     let m;
                     try { m = JSON.parse(data); } catch (e) { return; }
-                    const parts = String(m.path || '/').split('/').filter(Boolean);
-                    if (ev === 'put') rawRoot = fbSet(rawRoot, parts, m.data === undefined ? null : m.data);
+                    const sub = String(m.path || '/').split('/').filter(Boolean), parts = [key].concat(sub);
+                    if (ev === 'put') { rawRoot = fbSet(rawRoot, parts, m.data === undefined ? null : m.data); if (!sub.length) rawReady[key] = true; }
                     else if (m.data && typeof m.data === 'object') Object.entries(m.data).forEach(([k, v]) => { rawRoot = fbSet(rawRoot, parts.concat(k), v); });
-                    this.cloudApplyRows(fbRows(rawRoot, 'documents'), fbRows(rawRoot, 'findings'));
+                    if (rawReady.documents && rawReady.findings) this.cloudApplyRows(fbRows(rawRoot, 'documents'), fbRows(rawRoot, 'findings'));
                 },
                 async cloudStream() {
                     if (!CLOUD_ON || this._streaming) return;
                     this._streaming = true;
+                    await Promise.all(STREAM_KEYS.map(k => this.cloudStreamNode(k)));
+                    this._streaming = false;
+                },
+                async cloudStreamNode(key) {
+                    const st = streams[key];
                     let wait = 1000;
                     while (!this._stop) {
                         try {
-                            this._ctrl = new AbortController();
-                            const r = await fetch(fbApi.base() + '/.json', { headers: { Accept: 'text/event-stream' }, signal: this._ctrl.signal });
+                            st.ctrl = new AbortController();
+                            const r = await fetch(fbApi.base() + '/' + key + '.json', { headers: { Accept: 'text/event-stream' }, signal: st.ctrl.signal });
                             if (!r.ok || !r.body) throw new Error('stream');
-                            this.streamUp = true;
-                            this.lastEvent = Date.now();
+                            st.up = true;
+                            st.last = this.lastEvent = Date.now();
+                            this.streamUp = STREAM_KEYS.every(k => streams[k].up);
                             wait = 1000;
                             const reader = r.body.getReader(), dec = new TextDecoder();
                             let buf = '';
@@ -1605,17 +1773,17 @@
                                 if (done) break;
                                 buf += dec.decode(value, { stream: true }).replace(/\r\n/g, '\n');
                                 let i;
-                                while ((i = buf.indexOf('\n\n')) >= 0) { const block = buf.slice(0, i); buf = buf.slice(i + 2); this.cloudSseBlock(block); }
+                                while ((i = buf.indexOf('\n\n')) >= 0) { const block = buf.slice(0, i); buf = buf.slice(i + 2); this.cloudSseBlock(block, key); }
                             }
                         } catch (e) {}
+                        st.up = false;
                         this.streamUp = false;
                         if (this._stop) break;
                         await new Promise(res => setTimeout(res, wait));
                         wait = Math.min(wait * 2, 30000);
                     }
-                    this._streaming = false;
                 },
-                cloudStop() { this._stop = true; if (this._ctrl) this._ctrl.abort(); clearTimeout(this._pushTimer); clearTimeout(this._retryTimer); },
+                cloudStop() { this._stop = true; STREAM_KEYS.forEach(k => { if (streams[k].ctrl) streams[k].ctrl.abort(); }); clearTimeout(this._pushTimer); clearTimeout(this._retryTimer); },
                 schedulePush() {
                     if (!CLOUD_ON || !(this.isAdmin || this.isDeptUser)) return;
                     const dirty = ['documents', 'findings'].some(k => this[k].length !== snapshot[k].size || this[k].some(x => snapshot[k].get(x.id) !== canon(x)));
@@ -1702,6 +1870,7 @@
                     if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(parseInt(this.newDoc.moduleId))) this.newDoc.moduleId = DEPT_EDIT_FOLDERS[0];
                     this.newDoc.dept = (this.isDeptFolder && this.activeDept && this.activeDept !== '__none') ? this.activeDept : '';
                     this.newDoc.docType = this.isDeptFolder ? this.activeType : '';
+                    this.clearFile('newDocFile');
                     this.showUploadModal = true;
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
@@ -1724,15 +1893,27 @@
                         this.findingEditId = null;
                         this.findingForm = { type: this.auditTab, temuan: '', dept: '', status: 'Minor', dueDate: '', buktiUrl: '', buktiNote: '' };
                     }
+                    this.clearFile('findingFile');
                     this.showFindingModal = true;
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
-                submitFinding() {
-                    if (!this.isAdmin) return;
+                async submitFinding() {
+                    if (this.uploadBusy || !this.isAdmin) return;
                     const f = this.findingForm, temuan = f.temuan.trim(), buktiUrl = (f.buktiUrl || '').trim();
                     if (!temuan || !f.dept) { this.findingError = 'Isi temuan dan pilih departemen.'; return; }
-                    if (buktiUrl && !/^https:\/\//i.test(buktiUrl)) { this.findingError = 'Link bukti perbaikan harus diawali https://'; return; }
+                    let file = null;
+                    if (CLOUD_ON) {
+                        const picked = this.pickedFile('findingFile');
+                        if (picked) {
+                            const prob = this.fileProblem(picked);
+                            if (prob) { this.findingError = prob; return; }
+                            this.findingError = '';
+                            try { file = await this.sendFile(picked, 0); } catch (e) { this.findingError = e.message || 'Unggah gagal.'; return; }
+                            if (!this.user) return;
+                        }
+                    } else if (buktiUrl && !/^https:\/\//i.test(buktiUrl)) { this.findingError = 'Link bukti perbaikan harus diawali https://'; return; }
                     const data = { type: f.type, temuan, dept: f.dept, status: f.status, dueDate: f.dueDate, buktiUrl, buktiNote: (f.buktiNote || '').trim() };
+                    if (file) { data.buktiFile = file; data.buktiUrl = ''; }
                     if (this.findingEditId) {
                         const x = this.findings.find(i => i.id === this.findingEditId);
                         if (!x) return;
@@ -1744,11 +1925,15 @@
                     }
                     this.auditTab = f.type;
                     this.showFindingModal = false;
+                    this.clearFile('findingFile');
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
                 deleteFinding(id) {
                     if (!this.isAdmin) return;
-                    if (confirm('Hapus temuan audit ini?')) this.findings = this.findings.filter(x => x.id !== id);
+                    if (!confirm('Hapus temuan audit ini?')) return;
+                    const x = this.findings.find(i => i.id === id);
+                    this.findings = this.findings.filter(i => i.id !== id);
+                    if (x) this.dropFiles([x.buktiFile]);
                 },
                 openFindingReview(f) {
                     if (!this.isAdmin) return;
@@ -1815,12 +2000,13 @@
                     this.editDoc = doc;
                     this.editForm = { moduleId: doc.moduleId, code: doc.code, title: doc.title, version: doc.version, iso: [...doc.iso], status: doc.status, note: '', spUrl: doc.spUrl || '', dept: doc.dept || '', docType: doc.docType || '' };
                     this.editError = '';
+                    this.clearFile('editDocFile');
                     this.showEditModal = true;
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
-                submitEdit() {
-                    if (!this.editDoc || !this.canEdit(this.editDoc)) return;
+                async submitEdit() {
+                    if (this.uploadBusy || !this.editDoc || !this.canEdit(this.editDoc)) return;
                     const d = this.editDoc, f = this.editForm;
                     const code = f.code.trim(), title = f.title.trim(), version = f.version.trim(), spUrl = (f.spUrl || '').trim();
                     const iso = [...f.iso].sort().join(', ');
@@ -1830,8 +2016,12 @@
                     const newStatus = this.isAdmin ? f.status : 'In Review';
                     const dept = isDept ? f.dept : '', docType = isDept ? f.docType : '';
                     if (isDept && (!dept || !docType)) { this.editError = 'Pilih departemen dan kategori dokumen.'; return; }
-                    if (!/^https:\/\//i.test(spUrl)) { this.editError = 'Link SharePoint wajib diisi dan diawali https://'; return; }
-                    const spChanged = spUrl !== (d.spUrl || '');
+                    const picked = CLOUD_ON ? this.pickedFile('editDocFile') : null;
+                    if (CLOUD_ON) {
+                        if (picked) { const prob = this.fileProblem(picked); if (prob) { this.editError = prob; return; } }
+                        else if (!d.file && !/^https:\/\//i.test(d.spUrl || '')) { this.editError = 'Dokumen ini belum memiliki file. Pilih file untuk diunggah.'; return; }
+                    } else if (!/^https:\/\//i.test(spUrl)) { this.editError = 'Link dokumen wajib diisi dan diawali https://'; return; }
+                    const spChanged = !CLOUD_ON && spUrl !== (d.spUrl || '');
                     const changes = [];
                     if (code !== d.code) changes.push('Nomor dokumen: ' + d.code + ' menjadi ' + code);
                     if (title !== d.title) changes.push('Judul dokumen diubah');
@@ -1841,26 +2031,45 @@
                     if (moduleId !== d.moduleId) changes.push('Dipindahkan ke folder ' + this.folderName(moduleId));
                     if (dept !== (d.dept || '')) changes.push('Departemen: ' + (d.dept || '-') + ' menjadi ' + (dept || '-'));
                     if (docType !== (d.docType || '')) changes.push('Kategori: ' + (d.docType || '-') + ' menjadi ' + (docType || '-'));
-                    if (spChanged) changes.push('Link dokumen SharePoint diperbarui');
-                    if (!changes.length) { this.editError = 'Belum ada perubahan. Ubah data atau link dokumen terlebih dahulu.'; return; }
+                    if (spChanged) changes.push('Link dokumen diperbarui');
+                    if (picked) changes.push('File dokumen diperbarui (' + picked.name + ')');
+                    if (!changes.length) { this.editError = 'Belum ada perubahan. Ubah data atau file dokumen terlebih dahulu.'; return; }
                     if (!f.note.trim()) { this.editError = 'Isi catatan perubahan agar revisi tercatat.'; return; }
 
+                    let file = null;
+                    if (picked) {
+                        this.editError = '';
+                        try { file = await this.sendFile(picked, moduleId); } catch (e) { this.editError = e.message || 'Unggah gagal.'; return; }
+                        if (!this.user || this.editDoc !== d) return;
+                    }
+
                     // simpan kondisi awal sebagai Revisi ke-0 sebelum diubah
-                    if (!d.history) d.history = [{ rev: 0, version: d.version, date: d.date, by: d.author, note: 'Dokumen awal', changes: [], spUrl: d.spUrl || '' }];
+                    if (!d.history) {
+                        const h0 = { rev: 0, version: d.version, date: d.date, by: d.author, note: 'Dokumen awal', changes: [], spUrl: d.spUrl || '' };
+                        if (d.file) h0.file = { ...d.file };
+                        d.history = [h0];
+                    }
 
                     const today = new Date().toISOString().split('T')[0];
                     d.rev = (d.rev || 0) + 1;
-                    Object.assign(d, { code, title, version, iso: [...f.iso], status: newStatus, moduleId, updatedAt: today, spUrl, dept, docType });
-                    d.history.push({ rev: d.rev, spUrl: spChanged ? spUrl : '', version, date: today, by: this.user.name, note: f.note.trim(), changes });
+                    const nextSp = CLOUD_ON ? (file ? '' : (d.spUrl || '')) : spUrl;
+                    Object.assign(d, { code, title, version, iso: [...f.iso], status: newStatus, moduleId, updatedAt: today, spUrl: nextSp, dept, docType });
+                    if (file) d.file = file;
+                    const h = { rev: d.rev, spUrl: spChanged ? spUrl : '', version, date: today, by: this.user.name, note: f.note.trim(), changes };
+                    if (file) h.file = { ...file };
+                    d.history.push(h);
                     this.showEditModal = false;
                     this.editDoc = null;
+                    this.clearFile('editDocFile');
                     this.$nextTick(() => { lucide.createIcons(); });
                 },
 
                 deleteDoc(id) {
                     if(!this.isAdmin) return;
                     if(confirm('Apakah Anda yakin ingin menghapus arsip dokumen PT Energi Batubara Lestari ini?')) {
+                        const d = this.documents.find(x => x.id === id);
                         this.documents = this.documents.filter(d => d.id !== id);
+                        if (d) this.dropFiles([d.file].concat((d.history || []).map(h => h.file)));   // file ikut dihapus agar ruang penyimpanan tidak penuh
                     }
                 },
 
@@ -1896,7 +2105,7 @@
                         this.cloudStream();
                         setInterval(() => this.cloudTick(), 1500);
                         setInterval(() => this.cloudPull(false), 300000);
-                        document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.cloudPull(false); if (!this.streamUp && this._ctrl) this._ctrl.abort(); } });
+                        document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.cloudPull(false); STREAM_KEYS.forEach(k => { if (!streams[k].up && streams[k].ctrl) streams[k].ctrl.abort(); }); } });
                         window.addEventListener('beforeunload', e => { if (this.pendingPush) { e.preventDefault(); e.returnValue = ''; } });
                     }
                     this.$watch('user', () => this.$nextTick(() => { lucide.createIcons(); }));
