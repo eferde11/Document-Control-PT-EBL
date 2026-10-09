@@ -257,7 +257,6 @@
                         <span x-text="syncLabel"></span>
                     </button>
                     <button x-show="!cloudOn && (isAdmin || isDeptUser)" @click="showDataModal = true" class="relative border border-slate-300 hover:border-emerald-600 hover:text-emerald-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="database" class="w-4 h-4"></i> Data<span x-show="dirty" class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white"></span></button>
-                    <a x-show="isAdmin || isDeptUser" :href="spFolderUrl" target="_blank" rel="noopener noreferrer" class="border border-slate-300 hover:border-sky-600 hover:text-sky-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="folder-open" class="w-4 h-4"></i> Folder SharePoint</a>
                     <span x-show="isDeptUser" class="px-3 py-1.5 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="building-2" class="w-3.5 h-3.5"></i> Akses departemen</span>
                     <span x-show="!isAdmin && !isDeptUser" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Mode lihat saja</span>
                     <button x-show="isAdmin || (isDeptUser && !isFindings)" @click="isFindings ? openFinding() : openAdd()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
@@ -644,7 +643,7 @@
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Link Dokumen di SharePoint</label>
                     <input type="url" x-model="newDoc.spUrl" required placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <p class="text-slate-400 mt-1">Unggah file ke folder SharePoint lewat tombol "Folder SharePoint", lalu salin link berbagi file tersebut dan tempel di sini.</p>
+                    <p class="text-slate-400 mt-1">Unggah file ke SharePoint, lalu salin link berbagi file tersebut dan tempel di sini.</p>
                 </div>
                 <div class="pt-4 flex justify-end gap-2 border-t">
                     <button type="button" @click="showUploadModal = false" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Batal</button>
@@ -906,7 +905,7 @@
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Link Bukti Perbaikan di SharePoint</label>
                     <input type="url" x-model="evidenceForm.buktiUrl" required placeholder="https://hitdigitalid-my.sharepoint.com/..." class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <p class="text-slate-400 mt-1">Unggah bukti ke folder SharePoint lewat tombol "Folder SharePoint", lalu salin link berbagi dan tempel di sini.</p>
+                    <p class="text-slate-400 mt-1">Unggah bukti ke SharePoint, lalu salin link berbagi dan tempel di sini.</p>
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Keterangan Bukti</label>
@@ -1087,7 +1086,6 @@
             .filter(u => u && u.username && ['admin', 'viewer', 'dept'].includes(u.role))
             .map(u => ({ username: String(u.username).trim().toLowerCase(), name: String(u.name || u.username), role: u.role, hash: String(u.hash || '').trim().toLowerCase() }));
         const USERS = normUsers(CFG.users).length ? normUsers(CFG.users) : normUsers(DEFAULT_USERS);
-        const SHAREPOINT_FOLDER_URL = 'https://hitdigitalid-my.sharepoint.com/:f:/g/personal/fani_damayanti_hasnurgroup_com/IgBr0caM1Ym0So0NpFrVRT-YAcGx49eJlsNFg1X3KG3DcUM?e=RljwIT'; // folder penyimpanan dokumen di SharePoint
         const ALLOW_GUEST_VIEWER = true; // true = tombol "Lihat dokumen" masuk tanpa login. false = wajib login dengan akun Viewer.
         const DEPT_EDIT_FOLDERS = [11, 12]; // folder yang boleh ditambah dan diubah oleh akun Departemen
         const VIEWER_CAN_OPEN_SHAREPOINT = true; // false = tombol "Buka di SharePoint" hanya untuk admin
@@ -1219,7 +1217,6 @@
                 reviewDoc: null,
                 reviewForm: { result: '', reviewer: '', note: '' },
                 
-                spFolderUrl: SHAREPOINT_FOLDER_URL,
                 cloudOn: CLOUD_ON,
                 dataReady: false,
                 dataSource: 'contoh',
