@@ -485,7 +485,7 @@
                                             <td class="p-4">
                                                 <div class="flex items-center gap-1">
                                                     <button x-show="x.buktiFile && canOpenSp" @click="openFile(x.buktiFile)" :disabled="!!fileBusy" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-navy hover:bg-brand-navyDark text-white text-xs font-semibold transition disabled:opacity-60" title="Lihat bukti di layar"><i data-lucide="eye" class="w-3.5 h-3.5"></i> <span x-text="x.buktiFile && fileBusy === x.buktiFile.id ? 'Memuat...' : 'Lihat bukti'"></span></button>
-                                                    <button x-show="x.buktiFile && (isAdmin || isDeptUser)" @click="openFile(x.buktiFile, true)" :disabled="!!fileBusy" class="inline-flex align-middle p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition disabled:opacity-60" title="Unduh bukti"><i data-lucide="download" class="w-4 h-4"></i></button>
+                                                    <button x-show="x.buktiFile && (isAdmin || isDeptUser)" @click="openFile(x.buktiFile, true, 'bukti')" :disabled="!!fileBusy" class="inline-flex align-middle p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition disabled:opacity-60" title="Unduh bukti"><i data-lucide="download" class="w-4 h-4"></i></button>
                                                 </div>
                                                 <a x-show="!x.buktiFile && x.buktiUrl && canOpenSp" :href="safeUrl(x.buktiUrl)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Lihat bukti</a>
                                                 <span x-show="!x.buktiUrl && !x.buktiFile" class="text-slate-400 text-xs">Belum ada bukti</span>
@@ -599,7 +599,7 @@
                                     <button x-show="isAdmin" @click="openReview(doc)" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:border-emerald-600 hover:text-emerald-700 transition" title="Review dokumen"><i data-lucide="clipboard-check" class="w-4 h-4"></i> Review</button>
                                     <button x-show="isAdmin" @click="openApproval(doc)" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:border-ochre-600 hover:text-ochre-600 transition" title="Approval dokumen"><i data-lucide="badge-check" class="w-4 h-4"></i> Approval</button>
                                     <div class="flex items-center gap-0.5 lg:basis-full lg:justify-end">
-                                        <button x-show="doc.file && (isAdmin || isDeptUser)" @click="openFile(doc.file, true)" :disabled="!!fileBusy" class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition disabled:opacity-60" title="Unduh dokumen"><i data-lucide="download" class="w-4 h-4"></i></button>
+                                        <button x-show="canDl(doc.file)" @click="openFile(doc.file, true)" :disabled="!!fileBusy" class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition disabled:opacity-60" :title="isAdmin ? 'Unduh dokumen asli' : 'Unduh salinan PDF ber-watermark TIDAK TERKENDALI'"><i data-lucide="download" class="w-4 h-4"></i></button>
                                         <button @click="viewDetail(doc)" class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Detail dan riwayat revisi"><i data-lucide="info" class="w-4 h-4"></i></button>
                                         <button x-show="canEdit(doc)" @click="openEdit(doc)" class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen"><i data-lucide="pencil" class="w-4 h-4"></i></button>
                                         <button x-show="isAdmin" @click="deleteDoc(doc.id)" class="p-2 hover:bg-rose-100 rounded-lg text-rose-600 transition" title="Hapus dokumen"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -811,7 +811,7 @@
                     <p x-show="!detailDoc.spUrl && !detailDoc.file" class="p-4 bg-slate-50 border border-dashed rounded-lg text-slate-500 text-center">Dokumen ini belum memiliki file. Admin dapat mengunggahnya lewat tombol edit.</p>
                     <p x-show="detailDoc.file" class="text-slate-500 flex items-center gap-1.5"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i> <span x-text="detailDoc.file ? detailDoc.file.name + ' · ' + fmtSize(detailDoc.file.size) : ''"></span></p>
                     <div class="pt-4 border-t flex justify-end gap-2">
-                        <button type="button" x-show="detailDoc.file && (isAdmin || isDeptUser)" @click="openFile(detailDoc.file, true)" :disabled="!!fileBusy" class="px-4 py-2 border border-sky-600 text-sky-700 hover:bg-sky-50 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
+                        <button type="button" x-show="canDl(detailDoc.file)" :title="isAdmin ? 'Unduh dokumen asli' : 'Unduh salinan PDF ber-watermark TIDAK TERKENDALI'" @click="openFile(detailDoc.file, true)" :disabled="!!fileBusy" class="px-4 py-2 border border-sky-600 text-sky-700 hover:bg-sky-50 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
                         <button type="button" x-show="detailDoc.file && canOpenSp" @click="openFile(detailDoc.file)" :disabled="!!fileBusy" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="eye" class="w-4 h-4"></i> <span x-text="fileBusy ? 'Memuat...' : 'Buka dokumen'"></span></button>
                         <a x-show="!detailDoc.file && detailDoc.spUrl && canOpenSp" :href="safeUrl(detailDoc.spUrl)" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2"><i data-lucide="external-link" class="w-4 h-4"></i> Buka dokumen</a>
                         <button @click="closeDetail()" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-semibold">Tutup</button>
@@ -1373,6 +1373,99 @@
             body.appendChild(img);
             return { pages: 0, destroy() { URL.revokeObjectURL(url); body.innerHTML = ''; } };
         };
+        // ---------- Salinan yang diunduh akun Viewer dan Departemen: selalu PDF dengan watermark hitam ----------
+        const WATERMARK_TEXT = 'TIDAK TERKENDALI';
+        const WATERMARK_OPACITY = 0.3;                        // kepekatan tulisan hitam: 0.15 tipis, 0.5 pekat
+        const VIEWER_CAN_DOWNLOAD = true;                     // false = akun Viewer tidak bisa mengunduh sama sekali
+        const WATERMARK_EXT = ['pdf', 'png', 'jpg', 'jpeg'];  // hanya jenis ini yang bisa dijadikan PDF ber-watermark. Jenis lain hanya bisa diunduh Document Controller
+        const PDFLIB_URL = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+        let pdfLibPromise = null;
+        const loadPdfLib = () => {
+            if (window.PDFLib) return Promise.resolve(window.PDFLib);
+            if (!pdfLibPromise) pdfLibPromise = new Promise((res, rej) => {
+                const sc = document.createElement('script');
+                sc.src = PDFLIB_URL;
+                sc.onload = () => window.PDFLib ? res(window.PDFLib) : rej(new Error('pdf-lib'));
+                sc.onerror = () => rej(new Error('pdf-lib'));
+                document.head.appendChild(sc);
+            }).catch(() => { pdfLibPromise = null; throw new Error('Alat watermark gagal dimuat. Periksa koneksi internet lalu coba lagi.'); });
+            return pdfLibPromise;
+        };
+        const joinParts = parts => {
+            let total = 0;
+            parts.forEach(x => { total += x.length; });
+            const out = new Uint8Array(total);
+            let off = 0;
+            parts.forEach(x => { out.set(x, off); off += x.length; });
+            return out;
+        };
+        const markedName = name => { const n = String(name || 'dokumen'), i = n.lastIndexOf('.'); return (i > 0 ? n.slice(0, i) : n) + ' (' + WATERMARK_TEXT + ').pdf'; };   // salinan selalu berformat PDF
+        // Tulisan hitam miring di tengah setiap halaman, di atas isi dokumen.
+        // dark = halaman berisi foto gelap: tulisan hitam dibuat lebih pekat dan diberi garis tepi putih tipis supaya tetap terbaca.
+        const stampPages = (L, pdf, font, dark) => {
+            const unit = font.widthOfTextAtSize(WATERMARK_TEXT, 1), cap = font.heightAtSize(1, { descender: false }) * 0.72;
+            pdf.getPages().forEach(page => {
+                const box = page.getCropBox(), rot = ((page.getRotation().angle % 360) + 360) % 360;
+                const turned = rot === 90 || rot === 270;
+                const W = turned ? box.height : box.width, H = turned ? box.width : box.height;   // ukuran halaman seperti terlihat di layar
+                const size = 0.72 * Math.hypot(W, H) / unit;
+                const ang = Math.atan2(H, W) + rot * Math.PI / 180;   // halaman yang diputar tetap terbaca dari kiri bawah ke kanan atas
+                const tw = unit * size, th = cap * size;
+                const x = box.x + box.width / 2 - tw / 2 * Math.cos(ang) + th / 2 * Math.sin(ang);
+                const y = box.y + box.height / 2 - tw / 2 * Math.sin(ang) - th / 2 * Math.cos(ang);
+                const rotate = L.degrees(ang * 180 / Math.PI);
+                if (dark) {
+                    const o = size * 0.014;
+                    [[o, o], [-o, o], [o, -o], [-o, -o]].forEach(([dx, dy]) => page.drawText(WATERMARK_TEXT, { x: x + dx, y: y + dy, size, font, color: L.rgb(1, 1, 1), opacity: 0.22, rotate }));
+                }
+                page.drawText(WATERMARK_TEXT, { x, y, size, font, color: L.rgb(0, 0, 0), opacity: dark ? Math.max(WATERMARK_OPACITY, 0.6) : WATERMARK_OPACITY, rotate });
+            });
+        };
+        const watermarkPdf = async parts => {
+            const L = await loadPdfLib();
+            let pdf;
+            try { pdf = await L.PDFDocument.load(joinParts(parts), { updateMetadata: false }); }
+            catch (e) { throw new Error('PDF ini terkunci atau rusak sehingga tidak dapat diberi watermark, jadi tidak dapat diunduh. Gunakan tombol Buka, atau hubungi Document Controller.'); }
+            stampPages(L, pdf, await pdf.embedFont(L.StandardFonts.HelveticaBold), false);
+            return new Blob([await pdf.save()], { type: 'application/pdf' });
+        };
+        // Gambar dijadikan satu halaman PDF ukuran A4 (tegak atau mendatar mengikuti gambarnya), lalu diberi watermark.
+        const imageToMarkedPdf = async (parts, ext) => {
+            const L = await loadPdfLib();
+            const url = URL.createObjectURL(new Blob(parts, { type: ext === 'png' ? 'image/png' : 'image/jpeg' }));
+            let jpg, w, h, dark = false;
+            try {
+                const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('Gambar tidak dapat dibaca sehingga tidak dapat dijadikan PDF.')); im.src = url; });
+                const k = Math.min(1, 3000 / Math.max(img.naturalWidth, img.naturalHeight));   // foto sangat besar diperkecil agar PDF tidak berat
+                w = Math.max(1, Math.round(img.naturalWidth * k));
+                h = Math.max(1, Math.round(img.naturalHeight * k));
+                const cv = document.createElement('canvas');
+                cv.width = w;
+                cv.height = h;
+                const g = cv.getContext('2d');
+                g.fillStyle = '#fff';
+                g.fillRect(0, 0, w, h);
+                g.drawImage(img, 0, 0, w, h);   // lewat kanvas agar arah foto dari ponsel (EXIF) ikut benar
+                // ukur kecerahan rata-rata: foto gelap perlu tulisan yang lebih tegas
+                const probe = document.createElement('canvas');
+                probe.width = probe.height = 24;
+                const pg = probe.getContext('2d');
+                pg.drawImage(cv, 0, 0, 24, 24);
+                const px = pg.getImageData(0, 0, 24, 24).data;
+                let sum = 0;
+                for (let q = 0; q < px.length; q += 4) sum += 0.299 * px[q] + 0.587 * px[q + 1] + 0.114 * px[q + 2];
+                dark = sum / (px.length / 4) < 120;
+                const blob = await new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('Gambar terlalu besar untuk dijadikan PDF.')), 'image/jpeg', 0.9));
+                jpg = new Uint8Array(await blob.arrayBuffer());
+            } finally { URL.revokeObjectURL(url); }
+            const pdf = await L.PDFDocument.create();
+            const PW = w > h ? 841.89 : 595.28, PH = w > h ? 595.28 : 841.89, margin = 28;
+            const page = pdf.addPage([PW, PH]);
+            const scale = Math.min((PW - margin * 2) / w, (PH - margin * 2) / h);
+            page.drawImage(await pdf.embedJpg(jpg), { x: (PW - w * scale) / 2, y: (PH - h * scale) / 2, width: w * scale, height: h * scale });
+            stampPages(L, pdf, await pdf.embedFont(L.StandardFonts.HelveticaBold), dark);
+            return new Blob([await pdf.save()], { type: 'application/pdf' });
+        };
         let published = null; // data publik terakhir (dari data.json atau contoh bawaan)
         let uidSeq = 0;
         const uid = () => Date.now() * 1000 + (uidSeq = (uidSeq + 1) % 1000);
@@ -1589,6 +1682,13 @@
                 get isAdmin() { return !!this.user && this.user.role === 'admin'; },
                 get isDeptUser() { return !!this.user && this.user.role === 'dept'; },
                 get isViewerRole() { return !!this.user && !this.isAdmin && !this.isDeptUser; },
+                // Unduh dokumen: Document Controller mendapat file asli. Departemen dan Viewer mendapat salinan ber-watermark,
+                // sehingga jenis file yang tidak bisa diberi watermark (Word, Excel, PowerPoint) tidak bisa mereka unduh.
+                canDl(f) {
+                    if (!f || !f.id || !this.user) return false;
+                    if (this.isAdmin) return true;
+                    return (this.isDeptUser || VIEWER_CAN_DOWNLOAD) && WATERMARK_EXT.includes(fileExt(f.name));
+                },
                 get canAdd() { return this.isAdmin || this.isDeptUser; },
                 get formModules() { return this.isAdmin ? this.docModules : this.docModules.filter(m => DEPT_EDIT_FOLDERS.includes(m.id)); },
                 get canOpenSp() { return this.isAdmin || this.isDeptUser || VIEWER_CAN_OPEN_SHAREPOINT; },
@@ -1648,17 +1748,20 @@
                     try { return await fbApi.uploadFile(file, moduleId, pct => { this.uploadPct = pct; }); }
                     finally { this.uploadBusy = false; }
                 },
-                async openFile(f, download) {
+                async openFile(f, download, kind) {
                     if (!f || !f.id || this.fileBusy) return;
                     if (!CLOUD_ON) { alert('File hanya dapat dibuka pada mode realtime.'); return; }
-                    if (!(download && (this.isAdmin || this.isDeptUser))) return this.viewFile(f);   // Buka: hanya melihat di layar, untuk semua akun
+                    const isBukti = kind === 'bukti';   // bukti perbaikan temuan bukan dokumen terkendali: tanpa watermark, hanya admin dan departemen
+                    if (!download || !(isBukti ? (this.isAdmin || this.isDeptUser) : this.canDl(f))) return this.viewFile(f);   // Buka: hanya melihat di layar
+                    const mark = !isBukti && !this.isAdmin, ext = fileExt(f.name);
                     this.fileBusy = f.id;
                     try {
                         const parts = await fbApi.downloadFile(f.id);
-                        const url = URL.createObjectURL(new Blob(parts, { type: 'application/octet-stream' }));
+                        const blob = !mark ? new Blob(parts, { type: 'application/octet-stream' }) : (ext === 'pdf' ? await watermarkPdf(parts) : await imageToMarkedPdf(parts, ext));
+                        const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = f.name || 'dokumen';
+                        a.download = mark ? markedName(f.name) : (f.name || 'dokumen');
                         document.body.appendChild(a); a.click(); a.remove();
                         setTimeout(() => URL.revokeObjectURL(url), 60000);
                     } catch (e) { alert(e.message || 'Gagal mengunduh file.'); }
@@ -1668,9 +1771,9 @@
                     const ext = fileExt(f.name), type = FILE_VIEW[ext];
                     if (!type) {
                         const fmt = ext ? ext.toUpperCase() : 'ini';
-                        alert((this.isAdmin || this.isDeptUser)
+                        alert(this.isAdmin
                             ? 'Dokumen berformat ' + fmt + ' tidak dapat ditampilkan di layar. Gunakan tombol Unduh, atau unggah versi PDF agar bisa dilihat semua akun.'
-                            : 'Dokumen berformat ' + fmt + ' tidak dapat ditampilkan di layar. Hanya PDF atau gambar yang bisa dilihat, jadi minta Document Controller mengunggah versi PDF-nya.');
+                            : 'Dokumen berformat ' + fmt + ' tidak dapat ditampilkan di layar dan tidak dapat diubah menjadi PDF ber-watermark, jadi hanya Document Controller yang dapat membukanya. Hanya PDF atau gambar yang bisa dilihat, jadi minta versi PDF-nya.');
                         return;
                     }
                     this.closeViewer();
