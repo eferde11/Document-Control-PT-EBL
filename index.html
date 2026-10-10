@@ -1403,10 +1403,10 @@
             body.appendChild(img);
             return { pages: 0, destroy() { URL.revokeObjectURL(url); body.innerHTML = ''; } };
         };
-        // ---------- Salinan yang diunduh akun Viewer dan Departemen: selalu PDF dengan watermark hitam ----------
+        // ---------- Salinan yang diunduh akun Departemen: selalu PDF dengan watermark hitam ----------
         const WATERMARK_TEXT = 'TIDAK TERKENDALI';
         const WATERMARK_OPACITY = 0.3;                        // kepekatan tulisan hitam: 0.15 tipis, 0.5 pekat
-        const VIEWER_CAN_DOWNLOAD = true;                     // false = akun Viewer tidak bisa mengunduh sama sekali
+        const VIEWER_CAN_DOWNLOAD = false;                    // akun Viewer hanya melihat dokumen di layar. true = Viewer boleh mengunduh salinan PDF ber-watermark
         const WATERMARK_EXT = ['pdf', 'png', 'jpg', 'jpeg'];  // hanya jenis ini yang bisa dijadikan PDF ber-watermark. Jenis lain hanya bisa diunduh Document Controller
         const PDFLIB_URL = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
         let pdfLibPromise = null;
