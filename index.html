@@ -197,6 +197,12 @@
                     <button @click="goModule(0)"
                             :class="activeModule === 0 ? 'nav-active' : 'nav-idle'"
                             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors font-medium">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i>
+                        <span class="truncate leading-tight flex-1">DASHBOARD</span>
+                    </button>
+                    <button @click="goModule(-1)"
+                            :class="activeModule === -1 ? 'nav-active' : 'nav-idle'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors font-medium">
                         <i data-lucide="layers" class="w-4 h-4 shrink-0"></i>
                         <span class="truncate leading-tight flex-1">SEMUA DOKUMEN</span>
                         <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/10" x-text="documents.length"></span>
@@ -242,9 +248,9 @@
         <main class="flex-1 flex flex-col overflow-y-auto">
             
             <!-- Header Top Bar -->
-            <header class="bg-white/90 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-4 flex justify-between items-center gap-3 sticky top-0 z-20">
+            <header class="bg-white/90 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-4 flex flex-wrap justify-between items-center gap-3 sticky top-0 z-20">
                 <div>
-                    <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <h1 class="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
                         <span x-text="getCurrentModule().name"></span>
                     </h1>
                     <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">Sistem Manajemen Terintegrasi PT Energi Batubara Lestari (ISO 9001, 14001, 45001)</p>
@@ -255,7 +261,7 @@
                         <span x-text="syncLabel"></span>
                     </button>
                     <button x-show="!cloudOn && (isAdmin || isDeptUser)" @click="showDataModal = true" class="relative border border-slate-300 hover:border-emerald-600 hover:text-emerald-700 text-slate-700 px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap"><i data-lucide="database" class="w-4 h-4"></i> Data<span x-show="dirty" class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white"></span></button>
-                    <span x-show="isDeptUser" class="px-3 py-1.5 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="building-2" class="w-3.5 h-3.5"></i> Akses departemen</span>
+                    <span x-show="isDeptUser" class="px-3 py-1.5 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold hidden sm:flex items-center gap-1.5"><i data-lucide="building-2" class="w-3.5 h-3.5"></i> Akses departemen</span>
                     <span x-show="!isAdmin && !isDeptUser" class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Mode lihat saja</span>
                     <button x-show="isAdmin || (isDeptUser && !isFindings)" @click="isFindings ? openFinding() : openAdd()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2 transition active:scale-95 whitespace-nowrap">
                         <i data-lucide="file-plus" class="w-4 h-4"></i> <span x-text="isFindings ? 'Tambah Temuan' : 'Tambah Dokumen'"></span>
@@ -271,39 +277,162 @@
             <!-- Dashboard Content Body -->
             <div class="p-4 md:p-8 space-y-5">
 
+                <!-- Dashboard: jumlah dokumen, kelengkapan per departemen, capaian temuan audit -->
+                <section x-show="isDash" x-cloak class="space-y-6">
+                    <div class="rounded-2xl bg-brand-navyDark text-white p-6 md:p-8">
+                        <div class="flex flex-wrap items-end justify-between gap-x-10 gap-y-5">
+                            <div>
+                                <p class="text-sm text-white/70">Jumlah dokumen terdaftar</p>
+                                <p class="font-display font-extrabold text-6xl md:text-7xl leading-none mt-2" x-text="dash.total"></p>
+                            </div>
+                            <dl class="flex flex-wrap gap-x-8 gap-y-3">
+                                <div><dt class="text-xs text-white/60 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-brand-leaf"></span>Approved</dt><dd class="font-display text-2xl font-bold mt-0.5" x-text="dash.approved"></dd></div>
+                                <div><dt class="text-xs text-white/60 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-brand-sun"></span>Dalam review</dt><dd class="font-display text-2xl font-bold mt-0.5" x-text="dash.review"></dd></div>
+                                <div><dt class="text-xs text-white/60 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-white/40"></span>Status lain</dt><dd class="font-display text-2xl font-bold mt-0.5" x-text="dash.other"></dd></div>
+                            </dl>
+                        </div>
+                        <div class="mt-6 h-3 rounded-full bg-white/10 overflow-hidden flex" role="img" :aria-label="dash.approved + ' approved, ' + dash.review + ' dalam review, ' + dash.other + ' status lain'">
+                            <div class="bg-brand-leaf transition-all duration-300" :style="'width:' + pctOf(dash.approved, dash.total) + '%'"></div>
+                            <div class="bg-brand-sun transition-all duration-300" :style="'width:' + pctOf(dash.review, dash.total) + '%'"></div>
+                            <div class="bg-white/40 transition-all duration-300" :style="'width:' + pctOf(dash.other, dash.total) + '%'"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                        <div class="p-5 md:p-6 flex flex-wrap items-end justify-between gap-4 border-b border-slate-200">
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">Kelengkapan dokumen departemen</h2>
+                                <p class="text-sm text-slate-500 mt-1 max-w-xl">Departemen dinilai lengkap bila punya minimal satu dokumen di setiap kategori. Angka di tiap kotak adalah jumlah dokumennya.</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-display text-5xl font-extrabold leading-none text-brand-navy" x-text="dash.pct + '%'"></p>
+                                <p class="text-xs text-slate-500 mt-1.5" x-text="dash.lengkap + ' dari ' + dash.deptTotal + ' departemen sudah lengkap'"></p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm min-w-[760px]">
+                                <thead>
+                                    <tr class="text-xs text-slate-500">
+                                        <th class="text-left font-semibold py-3 pl-5 md:pl-6 pr-3">Departemen</th>
+                                        <template x-for="(t, i) in docTypeShort" :key="t">
+                                            <th class="font-semibold py-3 px-1 w-14 text-center" :title="docTypes[i]" x-text="t"></th>
+                                        </template>
+                                        <th class="text-right font-semibold py-3 pl-3 pr-5 md:pr-6 w-44">Kelengkapan</th>
+                                    </tr>
+                                </thead>
+                                <template x-for="grp in dash.groups" :key="grp.label">
+                                    <tbody>
+                                        <tr>
+                                            <th :colspan="docTypes.length + 2" class="text-left bg-slate-50 border-y border-slate-200 px-5 md:px-6 py-2 text-xs font-bold text-slate-600" x-text="grp.label + ', ' + grp.pct + '% lengkap'"></th>
+                                        </tr>
+                                        <template x-for="d in grp.rows" :key="d.name">
+                                            <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                                                <td class="py-2 pl-5 md:pl-6 pr-3">
+                                                    <button type="button" @click="goDept(d.moduleId, d.name)" class="text-left font-medium text-slate-800 hover:text-brand-navy hover:underline" x-text="d.name"></button>
+                                                    <span class="md:hidden block text-[11px] text-slate-500" x-text="d.pct + '% lengkap'"></span>
+                                                </td>
+                                                <template x-for="(n, i) in d.cells" :key="i">
+                                                    <td class="py-2 px-1 text-center">
+                                                        <span class="inline-flex w-10 h-8 items-center justify-center rounded-md text-xs font-bold" :class="n ? 'bg-brand-leaf text-white' : 'bg-slate-100 text-slate-400'" :title="docTypes[i] + ': ' + n + ' dokumen'" x-text="n || '0'"></span>
+                                                    </td>
+                                                </template>
+                                                <td class="py-2 pl-3 pr-5 md:pr-6">
+                                                    <div class="flex items-center justify-end gap-3">
+                                                        <div class="w-20 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full" :class="d.pct === 100 ? 'bg-brand-leaf' : 'bg-brand-navy'" :style="'width:' + d.pct + '%'"></div></div>
+                                                        <span class="w-11 text-right font-display font-bold" :class="d.pct === 100 ? 'text-brand-leaf' : 'text-slate-800'" x-text="d.pct + '%'"></span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </template>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-6">
+                        <template x-for="a in dash.audits" :key="a.type">
+                            <div class="bg-white rounded-2xl border border-slate-200 p-5 md:p-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <h2 class="text-xl font-bold text-slate-900" x-text="a.label"></h2>
+                                        <p class="text-sm text-slate-500 mt-1" x-text="a.total ? a.closed + ' dari ' + a.total + ' temuan sudah dinyatakan sesuai' : 'Belum ada temuan yang dicatat'"></p>
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <p class="font-display text-5xl font-extrabold leading-none" :class="a.pct === null ? 'text-slate-300' : (a.pct === 100 ? 'text-brand-leaf' : 'text-brand-navy')" x-text="a.pct === null ? '0%' : a.pct + '%'"></p>
+                                        <p class="text-xs text-slate-500 mt-1.5">capaian penutupan</p>
+                                    </div>
+                                </div>
+                                <div class="mt-5 h-2.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full transition-all duration-300" :class="a.pct === 100 ? 'bg-brand-leaf' : 'bg-brand-navy'" :style="'width:' + (a.pct || 0) + '%'"></div></div>
+                                <dl class="mt-5 grid grid-cols-4 gap-3">
+                                    <div class="rounded-lg bg-slate-50 px-3 py-2.5"><dt class="text-[11px] text-slate-500">Major</dt><dd class="font-display text-xl font-bold text-brand-flame" x-text="a.major"></dd></div>
+                                    <div class="rounded-lg bg-slate-50 px-3 py-2.5"><dt class="text-[11px] text-slate-500">Minor</dt><dd class="font-display text-xl font-bold text-ochre-600" x-text="a.minor"></dd></div>
+                                    <div class="rounded-lg bg-slate-50 px-3 py-2.5"><dt class="text-[11px] text-slate-500">OFI</dt><dd class="font-display text-xl font-bold text-brand-navy" x-text="a.ofi"></dd></div>
+                                    <div class="rounded-lg px-3 py-2.5" :class="a.overdue ? 'bg-rose-50' : 'bg-slate-50'"><dt class="text-[11px]" :class="a.overdue ? 'text-rose-700' : 'text-slate-500'">Terlambat</dt><dd class="font-display text-xl font-bold" :class="a.overdue ? 'text-brand-flame' : 'text-slate-400'" x-text="a.overdue"></dd></div>
+                                </dl>
+                                <button type="button" @click="goAudit(a.type)" class="mt-5 text-sm font-semibold text-brand-navy hover:underline" x-text="'Lihat temuan ' + a.label.toLowerCase()"></button>
+                            </div>
+                        </template>
+                    </div>
+                </section>
+
+                <!-- Ringkasan folder -->
+                <section x-show="!isFindings && !isDash" class="rounded-2xl bg-brand-navyDark text-white p-5 md:p-6">
+                    <div class="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+                        <div class="min-w-0">
+                            <p class="font-display font-extrabold text-5xl leading-none"><span x-text="folderStats.total"></span> <span class="text-base font-semibold text-white/70">dokumen</span></p>
+                            <p class="text-sm text-white/70 mt-2" x-text="folderCaption"></p>
+                        </div>
+                        <dl class="flex flex-wrap gap-x-7 gap-y-3">
+                            <div><dt class="text-xs text-white/60 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-brand-leaf"></span>Approved</dt><dd class="font-display text-2xl font-bold mt-0.5" x-text="folderStats.approved"></dd></div>
+                            <div><dt class="text-xs text-white/60 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-brand-sun"></span>Dalam review</dt><dd class="font-display text-2xl font-bold mt-0.5" x-text="folderStats.review"></dd></div>
+                            <div><dt class="text-xs text-white/60 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-white/40"></span>Status lain</dt><dd class="font-display text-2xl font-bold mt-0.5" x-text="folderStats.other"></dd></div>
+                            <div><dt class="text-xs text-white/60">Perlu update</dt><dd class="font-display text-2xl font-bold mt-0.5" :class="reviewStats.update ? 'text-brand-sun' : ''" x-text="reviewStats.update"></dd></div>
+                        </dl>
+                    </div>
+                    <div class="mt-5 h-2.5 rounded-full bg-white/10 overflow-hidden flex" role="img" :aria-label="folderStats.approved + ' approved, ' + folderStats.review + ' dalam review, ' + folderStats.other + ' status lain'">
+                        <div class="bg-brand-leaf transition-all duration-300" :style="'width:' + pctOf(folderStats.approved, folderStats.total) + '%'"></div>
+                        <div class="bg-brand-sun transition-all duration-300" :style="'width:' + pctOf(folderStats.review, folderStats.total) + '%'"></div>
+                        <div class="bg-white/40 transition-all duration-300" :style="'width:' + pctOf(folderStats.other, folderStats.total) + '%'"></div>
+                    </div>
+                    <p class="mt-2.5 text-xs text-white/60" x-text="reviewStats.done + ' dari ' + reviewStats.total + ' dokumen sudah direview'"></p>
+                </section>
+
                 <!-- Navigasi Departemen (folder 11 dan 12) -->
                 <section x-show="isDeptFolder" x-cloak class="space-y-4">
                     <div x-show="showDeptGrid">
-                        <p class="text-sm text-slate-500 mb-3">Pilih departemen untuk melihat dokumennya.</p>
-                        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                        <p class="text-sm text-slate-500 mb-3">Pilih departemen untuk melihat dokumennya. Garis di tiap kartu menunjukkan kategori dokumen yang sudah terisi.</p>
+                        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                             <template x-for="dp in currentDepts" :key="dp">
-                                <button @click="activeDept = dp; activeType = ''" class="text-left bg-white border border-slate-200 hover:border-emerald-600 rounded-lg p-4 transition-colors flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0"><i data-lucide="folder" class="w-5 h-5"></i></div>
-                                    <div class="min-w-0">
+                                <button @click="activeDept = dp; activeType = ''" class="text-left bg-white border border-slate-200 hover:border-brand-navy hover:shadow-md rounded-2xl p-5 transition">
+                                    <div class="flex items-start justify-between gap-3">
                                         <p class="font-display font-bold text-slate-900 leading-snug" x-text="dp"></p>
-                                        <p class="text-xs text-slate-500" x-text="deptCount(dp) + ' dokumen'"></p>
+                                        <span class="font-display font-extrabold text-xl leading-none shrink-0" :class="deptInfo(activeModule, dp).pct === 100 ? 'text-brand-leaf' : (deptInfo(activeModule, dp).pct ? 'text-brand-navy' : 'text-slate-300')" x-text="deptInfo(activeModule, dp).pct + '%'"></span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-1.5" x-text="deptInfo(activeModule, dp).docs + ' dokumen, ' + deptInfo(activeModule, dp).filled + ' dari ' + docTypes.length + ' kategori terisi'"></p>
+                                    <div class="mt-4 flex gap-1">
+                                        <template x-for="(n, i) in deptInfo(activeModule, dp).cells" :key="i">
+                                            <span class="h-1.5 flex-1 rounded-full" :class="n ? 'bg-brand-leaf' : 'bg-slate-200'" :title="docTypes[i] + ': ' + n + ' dokumen'"></span>
+                                        </template>
                                     </div>
                                 </button>
                             </template>
-                            <button x-show="uncatCount() > 0" @click="activeDept = '__none'; activeType = ''" class="text-left bg-white border border-dashed border-slate-300 hover:border-emerald-600 rounded-lg p-4 transition-colors flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-md bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><i data-lucide="folder-question" class="w-5 h-5"></i></div>
-                                <div class="min-w-0">
-                                    <p class="font-display font-bold text-slate-700 leading-snug">Belum dikategorikan</p>
-                                    <p class="text-xs text-slate-500" x-text="uncatCount() + ' dokumen, tentukan departemennya lewat Edit'"></p>
-                                </div>
+                            <button x-show="uncatCount() > 0" @click="activeDept = '__none'; activeType = ''" class="text-left bg-white border border-dashed border-slate-300 hover:border-brand-navy rounded-2xl p-5 transition">
+                                <p class="font-display font-bold text-slate-700 leading-snug">Belum dikategorikan</p>
+                                <p class="text-xs text-slate-500 mt-1.5" x-text="uncatCount() + ' dokumen. Tentukan departemennya lewat tombol edit.'"></p>
                             </button>
                         </div>
                     </div>
                     <div x-show="activeDept" class="space-y-3">
                         <div class="flex items-center gap-2 text-sm flex-wrap">
-                            <button @click="activeDept = ''; activeType = ''; searchQuery = ''" class="text-emerald-700 font-semibold hover:underline flex items-center gap-1"><i data-lucide="chevron-left" class="w-4 h-4"></i> Semua Departemen</button>
+                            <button @click="activeDept = ''; activeType = ''; searchQuery = ''" class="text-brand-navy font-semibold hover:underline flex items-center gap-1"><i data-lucide="chevron-left" class="w-4 h-4"></i> Semua departemen</button>
                             <span class="text-slate-300">/</span>
                             <span class="font-display font-bold text-slate-900" x-text="activeDept === '__none' ? 'Belum dikategorikan' : activeDept"></span>
                         </div>
                         <div class="flex gap-2 overflow-x-auto pb-1">
-                            <button @click="activeType = ''" :class="activeType === '' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-600'" class="px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors">Semua <span class="opacity-70" x-text="typeCount('')"></span></button>
+                            <button @click="activeType = ''" :class="activeType === '' ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white text-slate-600 border-slate-200 hover:border-brand-navy'" class="px-3.5 py-2 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors">Semua <span class="opacity-70" x-text="typeCount('')"></span></button>
                             <template x-for="t in docTypes" :key="t">
-                                <button @click="activeType = t" :class="activeType === t ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-600'" class="px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors"><span x-text="t"></span> <span class="opacity-70" x-text="typeCount(t)"></span></button>
+                                <button @click="activeType = t" :class="activeType === t ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white text-slate-600 border-slate-200 hover:border-brand-navy'" class="px-3.5 py-2 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors"><span x-text="t"></span> <span class="opacity-70" x-text="typeCount(t)"></span></button>
                             </template>
                         </div>
                     </div>
@@ -311,43 +440,46 @@
 
                 <!-- Temuan Audit ISO (folder 13) -->
                 <section x-show="isFindings" x-cloak class="space-y-5">
-                    <div class="flex gap-2 flex-wrap">
-                        <button @click="auditTab = 'internal'" :class="auditTab === 'internal' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-600'" class="px-4 py-2.5 rounded-md border text-sm font-semibold transition-colors flex items-center gap-2">
-                            <i data-lucide="clipboard-list" class="w-4 h-4"></i> Audit Internal <span class="text-[11px] px-1.5 py-0.5 rounded bg-black/10" x-text="findings.filter(x => x.type === 'internal').length"></span>
+                    <div class="inline-flex p-1 rounded-xl bg-slate-200/70 gap-1">
+                        <button @click="auditTab = 'internal'" :class="auditTab === 'internal' ? 'bg-white text-brand-navy shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                            <i data-lucide="clipboard-list" class="w-4 h-4"></i> Audit internal <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-900/10" x-text="findings.filter(x => x.type === 'internal').length"></span>
                         </button>
-                        <button @click="auditTab = 'eksternal'" :class="auditTab === 'eksternal' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-600'" class="px-4 py-2.5 rounded-md border text-sm font-semibold transition-colors flex items-center gap-2">
-                            <i data-lucide="landmark" class="w-4 h-4"></i> Audit Eksternal <span class="text-[11px] px-1.5 py-0.5 rounded bg-black/10" x-text="findings.filter(x => x.type === 'eksternal').length"></span>
+                        <button @click="auditTab = 'eksternal'" :class="auditTab === 'eksternal' ? 'bg-white text-brand-navy shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                            <i data-lucide="landmark" class="w-4 h-4"></i> Audit eksternal <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-900/10" x-text="findings.filter(x => x.type === 'eksternal').length"></span>
                         </button>
                     </div>
-                    <section class="bg-white border border-slate-200 rounded-lg">
-                        <div class="grid grid-cols-2 md:grid-cols-4 md:divide-x divide-slate-200">
-                            <div class="px-5 py-4"><p class="text-xs text-slate-500">Total temuan</p><p class="font-display text-3xl font-bold text-slate-900 mt-1" x-text="findingStats.total"></p></div>
-                            <div class="px-5 py-4"><p class="text-xs text-slate-500">Major</p><p class="font-display text-3xl font-bold text-rose-600 mt-1" x-text="findingStats.major"></p></div>
-                            <div class="px-5 py-4"><p class="text-xs text-slate-500">Minor</p><p class="font-display text-3xl font-bold text-amber-600 mt-1" x-text="findingStats.minor"></p></div>
-                            <div class="px-5 py-4"><p class="text-xs text-slate-500">OFI</p><p class="font-display text-3xl font-bold text-sky-600 mt-1" x-text="findingStats.ofi"></p></div>
+                    <section class="rounded-2xl bg-brand-navyDark text-white p-5 md:p-6">
+                        <div class="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+                            <div>
+                                <p class="font-display font-extrabold text-5xl leading-none"><span x-text="findingStats.total"></span> <span class="text-base font-semibold text-white/70">temuan</span></p>
+                                <p class="text-sm text-white/70 mt-2" x-text="findingStats.closed + ' dari ' + findingStats.total + ' sudah dinyatakan sesuai'"></p>
+                            </div>
+                            <dl class="flex flex-wrap gap-x-7 gap-y-3">
+                                <div><dt class="text-xs text-white/60">Major</dt><dd class="font-display text-2xl font-bold" x-text="findingStats.major"></dd></div>
+                                <div><dt class="text-xs text-white/60">Minor</dt><dd class="font-display text-2xl font-bold" x-text="findingStats.minor"></dd></div>
+                                <div><dt class="text-xs text-white/60">OFI</dt><dd class="font-display text-2xl font-bold" x-text="findingStats.ofi"></dd></div>
+                                <div><dt class="text-xs text-white/60">Capaian</dt><dd class="font-display text-2xl font-bold text-brand-sun" x-text="Math.round(pctOf(findingStats.closed, findingStats.total)) + '%'"></dd></div>
+                            </dl>
                         </div>
-                        <div class="border-t border-slate-200 px-5 py-3 flex items-center gap-4 text-xs text-slate-500">
-                            <span class="whitespace-nowrap" x-text="findingStats.closed + ' dari ' + findingStats.total + ' temuan sudah sesuai'"></span>
-                            <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-teal-500 transition-all duration-300" :style="'width:' + (findingStats.total ? findingStats.closed / findingStats.total * 100 : 0) + '%'"></div></div>
-                        </div>
+                        <div class="mt-5 h-2.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-brand-leaf rounded-full transition-all duration-300" :style="'width:' + pctOf(findingStats.closed, findingStats.total) + '%'"></div></div>
                     </section>
-                    <div class="bg-white p-3 rounded-lg border border-slate-200 flex flex-col md:flex-row gap-3 items-center">
+                    <div class="flex flex-col md:flex-row gap-3 md:items-center">
                         <div class="flex-1 w-full relative">
-                            <input type="text" x-model="findingFilter.q" placeholder="Cari temuan..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5"></i>
+                            <input type="text" x-model="findingFilter.q" placeholder="Cari temuan" class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-navy/40 focus:border-brand-navy">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-4 top-3.5"></i>
                         </div>
-                        <div class="flex items-center gap-2 w-full md:w-auto">
-                            <select x-model="findingFilter.status" class="border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                        <div class="grid grid-cols-2 md:flex md:items-center gap-2 w-full md:w-auto">
+                            <select x-model="findingFilter.status" class="w-full md:w-auto min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-navy/40">
                                 <option value="">Semua Status</option><option value="Major">Major</option><option value="Minor">Minor</option><option value="OFI">OFI</option>
                             </select>
-                            <select x-model="findingFilter.dept" class="border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white max-w-[200px]">
+                            <select x-model="findingFilter.dept" class="bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-navy/40 w-full md:w-auto min-w-0 md:max-w-[220px]">
                                 <option value="">Semua Departemen</option>
                                 <optgroup label="Site"><template x-for="dp in deptSite" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
                                 <optgroup label="HO"><template x-for="dp in deptHo" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
                             </select>
                         </div>
                     </div>
-                    <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="register w-full text-left text-[13px]">
                                 <thead class="bg-slate-100 border-b border-slate-200">
@@ -376,7 +508,10 @@
                                                 <span x-show="isOverdue(x)" class="block text-[10px] font-semibold text-rose-600">Terlambat</span>
                                             </td>
                                             <td class="p-4">
-                                                <button x-show="x.buktiFile && canOpenSp" @click="openFile(x.buktiFile)" :disabled="!!fileBusy" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition disabled:opacity-60"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span x-text="x.buktiFile && fileBusy === x.buktiFile.id ? 'Memuat...' : 'Lihat bukti'"></span></button>
+                                                <div class="flex items-center gap-1">
+                                                    <button x-show="x.buktiFile && canOpenSp" @click="openFile(x.buktiFile)" :disabled="!!fileBusy" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-navy hover:bg-brand-navyDark text-white text-xs font-semibold transition disabled:opacity-60" title="Lihat bukti di layar"><i data-lucide="eye" class="w-3.5 h-3.5"></i> <span x-text="x.buktiFile && fileBusy === x.buktiFile.id ? 'Memuat...' : 'Lihat bukti'"></span></button>
+                                                    <button x-show="x.buktiFile && (isAdmin || isDeptUser)" @click="openFile(x.buktiFile, true)" :disabled="!!fileBusy" class="inline-flex align-middle p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition disabled:opacity-60" title="Unduh bukti"><i data-lucide="download" class="w-4 h-4"></i></button>
+                                                </div>
                                                 <a x-show="!x.buktiFile && x.buktiUrl && canOpenSp" :href="safeUrl(x.buktiUrl)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Lihat bukti</a>
                                                 <span x-show="!x.buktiUrl && !x.buktiFile" class="text-slate-400 text-xs">Belum ada bukti</span>
                                                 <p x-show="x.buktiNote" class="text-[11px] text-slate-500 mt-1 max-w-[220px]" x-text="x.buktiNote"></p>
@@ -409,104 +544,54 @@
                     </div>
                 </section>
 
-                <!-- Ringkasan Modul -->
-                <section x-show="!isFindings" class="bg-white border border-slate-200 rounded-lg">
-                    <div class="grid grid-cols-2 md:grid-cols-4 md:divide-x divide-slate-200">
-                        <div class="px-5 py-4">
-                            <p class="text-xs text-slate-500">Dokumen di folder ini</p>
-                            <p class="font-display text-3xl font-bold text-slate-900 mt-1" x-text="filteredDocs.length"></p>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-xs text-slate-500">Approved</p>
-                            <p class="font-display text-3xl font-bold text-emerald-700 mt-1" x-text="filteredDocs.filter(d => d.status === 'Approved').length"></p>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-xs text-slate-500">Dalam review</p>
-                            <p class="font-display text-3xl font-bold text-amber-600 mt-1" x-text="filteredDocs.filter(d => d.status === 'In Review').length"></p>
-                        </div>
-                        <div class="px-5 py-4">
-                            <p class="text-xs text-slate-500">Perlu update</p>
-                            <p class="font-display text-3xl font-bold text-orange-600 mt-1" x-text="reviewStats.update"></p>
-                        </div>
+                <!-- Pencarian dan filter -->
+                <div x-show="!isFindings && !isDash" class="flex flex-col md:flex-row gap-3 md:items-center">
+                    <div class="flex-1 relative">
+                        <input type="text" x-model="searchQuery" placeholder="Cari nomor atau judul dokumen" class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-navy/40 focus:border-brand-navy">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-4 top-3.5"></i>
                     </div>
-                    <div class="border-t border-slate-200 px-5 py-3 flex items-center gap-4 text-xs text-slate-500">
-                        <span class="whitespace-nowrap" x-text="reviewStats.done + ' dari ' + reviewStats.total + ' dokumen sudah direview'"></span>
-                        <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden flex">
-                            <div class="bg-teal-500 transition-all duration-300" :style="'width:' + (reviewStats.total ? reviewStats.noUpdate / reviewStats.total * 100 : 0) + '%'"></div>
-                            <div class="bg-orange-500 transition-all duration-300" :style="'width:' + (reviewStats.total ? reviewStats.update / reviewStats.total * 100 : 0) + '%'"></div>
-                        </div>
-                        <span class="hidden sm:inline whitespace-nowrap"><span class="inline-block w-2 h-2 rounded-full bg-teal-500 mr-1"></span>Tidak perlu update <span class="inline-block w-2 h-2 rounded-full bg-orange-500 ml-3 mr-1"></span>Perlu update</span>
-                    </div>
-                </section>
-
-                <!-- Search & Filters Toolbar -->
-                <div x-show="!isFindings" class="bg-white p-3 rounded-lg border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
-                    <div class="flex-1 w-full relative">
-                        <input type="text" x-model="searchQuery" placeholder="Cari nomor dokumen, judul, atau kata kunci..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5"></i>
-                    </div>
-                    <div class="flex items-center gap-2 w-full md:w-auto">
-                        <select x-model="selectedFilterIso" class="border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                            <option value="">Semua Standar ISO</option>
+                    <div class="grid grid-cols-2 md:flex md:items-center gap-2">
+                        <select x-model="selectedFilterIso" class="w-full md:w-auto min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-navy/40">
+                            <option value="">Semua standar ISO</option>
                             <option value="9001">ISO 9001 (Mutu)</option>
                             <option value="14001">ISO 14001 (Lingkungan)</option>
                             <option value="45001">ISO 45001 (K3)</option>
                         </select>
-                        <select x-model="selectedFilterReview" class="border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                            <option value="">Semua Hasil Review</option>
-                            <option value="Belum Direview">Belum Direview</option>
-                            <option value="Perlu Update">Perlu Update</option>
-                            <option value="Tidak Perlu Update">Tidak Perlu Update</option>
+                        <select x-model="selectedFilterReview" class="w-full md:w-auto min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-navy/40">
+                            <option value="">Semua hasil review</option>
+                            <option value="Belum Direview">Belum direview</option>
+                            <option value="Perlu Update">Perlu update</option>
+                            <option value="Tidak Perlu Update">Tidak perlu update</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Document Records Table -->
-                <div x-show="!isFindings && !showDeptGrid" class="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="register w-full text-left text-[13px]">
-                            <thead class="bg-slate-100 border-b border-slate-200">
-                                <tr>
-                                    <th class="p-4">No. Dokumen</th>
-                                    <th class="p-4">Judul Dokumen & Keterangan</th>
-                                    <th class="p-4">Cakupan Standar ISO</th>
-                                    <th class="p-4">Revisi / Versi</th>
-                                    <th class="p-4">Status</th>
-                                    <th class="p-4">Hasil Review</th>
-                                    <th class="p-4 text-center">Aksi & Unduh</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                <template x-for="doc in filteredDocs" :key="doc.id">
-                                    <tr class="hover:bg-slate-50/80 transition">
-                                        <td class="p-4 font-mono font-semibold text-slate-700 whitespace-nowrap" x-text="doc.code"></td>
-                                        <td class="p-4">
-                                            <p class="font-semibold text-slate-900 leading-snug max-w-md" x-text="doc.title"></p>
-                                            <p x-show="activeModule === 0" class="text-[11px] font-semibold text-emerald-700 mt-0.5" x-text="folderName(doc.moduleId)"></p>
-                                            <p x-show="doc.dept" class="text-[11px] font-semibold text-emerald-700 mt-0.5" x-text="doc.dept + ' · ' + (doc.docType || '-')"></p>
-                                            <p class="text-[11px] text-slate-500 mt-0.5" x-text="'Didaftarkan oleh: ' + doc.author + ' | Tanggal: ' + doc.date + (doc.updatedAt ? ' | Diperbarui: ' + doc.updatedAt : '')"></p>
-                                            </td>
-                                        <td class="p-4 whitespace-nowrap">
-                                            <div class="flex gap-1.5">
-                                                <template x-for="iso in doc.iso" :key="iso">
-                                                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-md"
-                                                          :class="{
-                                                              'bg-blue-100 text-blue-700': iso === '9001',
-                                                              'bg-emerald-100 text-emerald-700': iso === '14001',
-                                                              'bg-purple-100 text-purple-700': iso === '45001'
-                                                          }"
-                                                          x-text="'ISO ' + iso"></span>
-                                                </template>
-                                            </div>
-                                        </td>
-                                        <td class="p-4 whitespace-nowrap">
-                                            <span class="font-mono text-slate-700" x-text="doc.version"></span>
-                                            <button @click="viewDetail(doc)" class="block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition"
-                                                    :class="(doc.rev || 0) > 0 ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
-                                                    :title="'Lihat riwayat revisi'" x-text="(doc.rev || 0) === 0 ? 'Revisi ke-0 (awal)' : 'Revisi ke-' + doc.rev"></button>
-                                        </td>
-                                        <td class="p-4 whitespace-nowrap">
-                                            <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold inline-flex items-center gap-1"
+                <!-- Daftar dokumen -->
+                <div x-show="!isFindings && !isDash && !showDeptGrid" class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <ul class="divide-y divide-slate-100">
+                        <template x-for="doc in filteredDocs" :key="doc.id">
+                            <li class="px-4 md:px-5 py-4 flex flex-col lg:flex-row lg:items-start gap-x-6 gap-y-3 hover:bg-slate-50 transition-colors">
+                                <div class="flex items-start gap-4 flex-1 min-w-0">
+                                    <div class="w-11 h-14 rounded-lg shrink-0 flex items-end justify-center pb-1.5 text-[10px] font-bold tracking-wide" :class="fileKind(doc).cls" :title="fileKind(doc).title" x-text="fileKind(doc).label"></div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                            <span class="font-mono text-xs font-semibold text-brand-navy bg-brand-navy/5 px-2 py-0.5 rounded" x-text="doc.code"></span>
+                                            <span class="font-mono text-xs text-slate-500" x-text="doc.version"></span>
+                                            <template x-for="iso in doc.iso" :key="iso">
+                                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-md"
+                                                      :class="{
+                                                          'bg-blue-100 text-blue-700': iso === '9001',
+                                                          'bg-emerald-100 text-emerald-700': iso === '14001',
+                                                          'bg-purple-100 text-purple-700': iso === '45001'
+                                                      }"
+                                                      x-text="'ISO ' + iso"></span>
+                                            </template>
+                                        </div>
+                                        <p class="font-semibold text-[15px] text-slate-900 leading-snug mt-1.5" x-text="doc.title"></p>
+                                        <p x-show="isAllDocs" class="text-[11px] font-semibold text-emerald-700 mt-1" x-text="folderName(doc.moduleId)"></p>
+                                        <p x-show="doc.dept" class="text-[11px] font-semibold text-emerald-700 mt-1" x-text="doc.dept + ', ' + (doc.docType || 'tanpa kategori')"></p>
+                                        <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                                            <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold inline-flex items-center gap-1.5"
                                                   :class="{
                                                       'bg-emerald-100 text-emerald-700': doc.status === 'Approved',
                                                       'bg-amber-100 text-amber-700': doc.status === 'In Review',
@@ -520,52 +605,38 @@
                                                       }"></span>
                                                 <span x-text="doc.status"></span>
                                             </span>
-                                        </td>
-                                        <td class="p-4 whitespace-nowrap">
-                                            <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold inline-flex items-center gap-1"
+                                            <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold"
                                                   :class="{
                                                       'bg-slate-100 text-slate-500': (doc.reviewStatus || 'Belum Direview') === 'Belum Direview',
                                                       'bg-orange-100 text-orange-700': doc.reviewStatus === 'Perlu Update',
                                                       'bg-teal-100 text-teal-700': doc.reviewStatus === 'Tidak Perlu Update'
                                                   }" x-text="doc.reviewStatus || 'Belum Direview'"></span>
-                                            <p class="text-[10px] text-slate-400 mt-1" x-show="doc.reviewDate" x-text="'Direview: ' + doc.reviewDate + ' oleh ' + doc.reviewer"></p>
-                                        </td>
-                                        <td class="p-4 text-center whitespace-nowrap">
-                                            <div class="flex items-center justify-end gap-1">
-                                                <button x-show="isAdmin" @click="openReview(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-emerald-600/40 text-emerald-700 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition" title="Review Dokumen">
-                                                    <i data-lucide="clipboard-check" class="w-4 h-4"></i> Review
-                                                </button>
-                                                <button x-show="doc.file && canOpenSp" @click="openFile(doc.file)" :disabled="!!fileBusy" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition disabled:opacity-60" title="Buka dokumen"><i data-lucide="file-text" class="w-4 h-4"></i> <span x-text="doc.file && fileBusy === doc.file.id ? 'Memuat...' : 'Buka'"></span></button>
-                                                <a x-show="!doc.file && doc.spUrl && canOpenSp" :href="safeUrl(doc.spUrl)" target="_blank" rel="noopener noreferrer" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition" title="Buka dokumen di SharePoint"><i data-lucide="external-link" class="w-4 h-4"></i> Buka</a>
-                                                <button x-show="isAdmin" @click="openApproval(doc)" class="mr-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-ochre-600/50 text-ochre-600 text-xs font-semibold hover:bg-ochre-500 hover:text-slate-950 transition" title="Approval dokumen"><i data-lucide="badge-check" class="w-4 h-4"></i> Approval</button>
-                                                <button x-show="canEdit(doc)" @click="openEdit(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen">
-                                                    <i data-lucide="pencil" class="w-4 h-4"></i>
-                                                </button>
-                                                <button @click="viewDetail(doc)" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Lihat dokumen">
-                                                    <i data-lucide="eye" class="w-4 h-4"></i>
-                                                </button>
-                                                <button x-show="isAdmin" @click="deleteDoc(doc.id)" class="p-1.5 hover:bg-rose-100 rounded-lg text-rose-600 transition" title="Hapus Dokumen">
-                                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </template>
-
-                                <!-- Empty State -->
-                                <tr x-show="filteredDocs.length === 0">
-                                    <td colspan="7" class="p-12 text-center text-slate-400">
-                                        <div class="max-w-xs mx-auto space-y-3">
-                                            <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                                                <i data-lucide="folder-open" class="w-6 h-6"></i>
-                                            </div>
-                                            <p class="text-sm font-medium text-slate-600">Tidak ada dokumen ditemukan pada modul ini.</p>
-                                            <p x-show="isAdmin" class="text-xs text-slate-400">Silakan gunakan tombol "Tambah Dokumen" untuk menambahkan arsip PT Energi Batubara Lestari.</p>
+                                            <button @click="viewDetail(doc)" class="px-2.5 py-1 rounded-full text-[11px] font-semibold transition"
+                                                    :class="(doc.rev || 0) > 0 ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                                                    title="Lihat riwayat revisi" x-text="'Revisi ke-' + (doc.rev || 0)"></button>
                                         </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                        <p class="text-[11px] text-slate-500 mt-2" x-text="'Didaftarkan ' + doc.date + ' oleh ' + doc.author + (doc.updatedAt ? ', diperbarui ' + doc.updatedAt : '') + (doc.reviewDate ? '. Direview ' + doc.reviewDate + ' oleh ' + doc.reviewer : '')"></p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-1.5 lg:justify-end lg:w-[330px] lg:shrink-0">
+                                    <button x-show="doc.file && canOpenSp" @click="openFile(doc.file)" :disabled="!!fileBusy" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand-navy hover:bg-brand-navyDark text-white text-xs font-semibold transition disabled:opacity-60" title="Lihat dokumen di layar"><i data-lucide="eye" class="w-4 h-4"></i> <span x-text="doc.file && fileBusy === doc.file.id ? 'Memuat...' : 'Buka'"></span></button>
+                                    <a x-show="!doc.file && doc.spUrl && canOpenSp" :href="safeUrl(doc.spUrl)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand-navy hover:bg-brand-navyDark text-white text-xs font-semibold transition" title="Buka tautan dokumen"><i data-lucide="external-link" class="w-4 h-4"></i> Buka</a>
+                                    <button x-show="isAdmin" @click="openReview(doc)" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:border-emerald-600 hover:text-emerald-700 transition" title="Review dokumen"><i data-lucide="clipboard-check" class="w-4 h-4"></i> Review</button>
+                                    <button x-show="isAdmin" @click="openApproval(doc)" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:border-ochre-600 hover:text-ochre-600 transition" title="Approval dokumen"><i data-lucide="badge-check" class="w-4 h-4"></i> Approval</button>
+                                    <div class="flex items-center gap-0.5 lg:basis-full lg:justify-end">
+                                        <button x-show="doc.file && (isAdmin || isDeptUser)" @click="openFile(doc.file, true)" :disabled="!!fileBusy" class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition disabled:opacity-60" title="Unduh dokumen"><i data-lucide="download" class="w-4 h-4"></i></button>
+                                        <button @click="viewDetail(doc)" class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Detail dan riwayat revisi"><i data-lucide="info" class="w-4 h-4"></i></button>
+                                        <button x-show="canEdit(doc)" @click="openEdit(doc)" class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition" title="Edit dokumen"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                        <button x-show="isAdmin" @click="deleteDoc(doc.id)" class="p-2 hover:bg-rose-100 rounded-lg text-rose-600 transition" title="Hapus dokumen"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                    <div x-show="filteredDocs.length === 0" class="px-6 py-14 text-center">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto"><i data-lucide="folder-open" class="w-6 h-6"></i></div>
+                        <p class="text-sm font-semibold text-slate-700 mt-3" x-text="searchQuery || selectedFilterIso || selectedFilterReview ? 'Tidak ada dokumen yang cocok dengan pencarian.' : 'Belum ada dokumen di sini.'"></p>
+                        <p x-show="isAdmin || isDeptUser" class="text-xs text-slate-500 mt-1">Gunakan tombol Tambah Dokumen di kanan atas untuk mengunggah.</p>
                     </div>
                 </div>
 
@@ -574,7 +645,7 @@
     </div>
 
     <!-- Modal Upload Dokumen -->
-    <!-- Penampil dokumen untuk akun Viewer: lihat saja, tanpa tombol unduh atau cetak -->
+    <!-- Penampil dokumen di dalam halaman: tombol Buka untuk semua akun hanya menampilkan, tanpa unduh atau cetak -->
     <div x-show="docViewer.open" x-cloak class="no-print fixed inset-0 z-[80] bg-slate-900 flex flex-col" style="-webkit-user-select:none;user-select:none" @contextmenu.prevent @dragstart.prevent @keydown.escape.window="docViewer.open && closeViewer()" @keydown.window="viewerKeys($event)">
         <div class="flex items-center justify-between gap-3 px-4 py-3 bg-slate-950 text-white border-b border-slate-700">
             <div class="min-w-0">
@@ -600,28 +671,28 @@
             </div>
             <form @submit.prevent="submitNewDocument" class="p-6 space-y-4 text-xs">
                 <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Pilih Modul Folder ISO</label>
-                    <select x-model="newDoc.moduleId" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    <label class="block font-semibold text-slate-700 mb-1">Folder</label>
+                    <select x-model="newDoc.moduleId" @change="onNewFolderChange()" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
                         <template x-for="mod in formModules" :key="mod.id">
                             <option :value="mod.id" x-text="mod.name"></option>
                         </template>
                     </select>
                 </div>
-                <div x-show="isDeptId(newDoc.moduleId)" class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Departemen</label>
-                        <select x-model="newDoc.dept" :required="isDeptId(newDoc.moduleId)" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                            <option value="">Pilih departemen</option>
-                            <template x-for="dp in deptsOf(newDoc.moduleId)" :key="dp"><option :value="dp" x-text="dp"></option></template>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Kategori</label>
-                        <select x-model="newDoc.docType" :required="isDeptId(newDoc.moduleId)" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                            <option value="">Pilih kategori</option>
-                            <template x-for="t in docTypes" :key="t"><option :value="t" x-text="t"></option></template>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Departemen pemilik dokumen</label>
+                    <select x-model="newDoc.dept" @change="onNewDeptChange()" :required="isDeptId(newDoc.moduleId)" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="" x-text="isAdmin ? 'Bukan dokumen departemen' : 'Pilih departemen'"></option>
+                        <optgroup label="Site"><template x-for="dp in deptSite" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
+                        <optgroup label="HO"><template x-for="dp in deptHo" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
+                    </select>
+                    <p class="text-slate-400 mt-1" x-text="newDoc.dept ? 'Dokumen akan masuk ke ' + folderName(parseInt(newDoc.moduleId)) + ', departemen ' + newDoc.dept + '.' : (isDeptId(newDoc.moduleId) ? 'Folder ini wajib memilih departemen.' : 'Memilih departemen otomatis memindahkan dokumen ke folder Dokumen Departemen (Site atau HO).')"></p>
+                </div>
+                <div x-show="isDeptId(newDoc.moduleId)">
+                    <label class="block font-semibold text-slate-700 mb-1">Kategori dokumen</label>
+                    <select x-model="newDoc.docType" :required="isDeptId(newDoc.moduleId)" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="">Pilih kategori</option>
+                        <template x-for="t in docTypes" :key="t"><option :value="t" x-text="t"></option></template>
+                    </select>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -766,7 +837,7 @@
                     <p x-show="detailDoc.file" class="text-slate-500 flex items-center gap-1.5"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i> <span x-text="detailDoc.file ? detailDoc.file.name + ' · ' + fmtSize(detailDoc.file.size) : ''"></span></p>
                     <div class="pt-4 border-t flex justify-end gap-2">
                         <button type="button" x-show="detailDoc.file && (isAdmin || isDeptUser)" @click="openFile(detailDoc.file, true)" :disabled="!!fileBusy" class="px-4 py-2 border border-sky-600 text-sky-700 hover:bg-sky-50 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
-                        <button type="button" x-show="detailDoc.file && canOpenSp" @click="openFile(detailDoc.file)" :disabled="!!fileBusy" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="file-text" class="w-4 h-4"></i> <span x-text="fileBusy ? 'Memuat...' : 'Buka dokumen'"></span></button>
+                        <button type="button" x-show="detailDoc.file && canOpenSp" @click="openFile(detailDoc.file)" :disabled="!!fileBusy" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="eye" class="w-4 h-4"></i> <span x-text="fileBusy ? 'Memuat...' : 'Buka dokumen'"></span></button>
                         <a x-show="!detailDoc.file && detailDoc.spUrl && canOpenSp" :href="safeUrl(detailDoc.spUrl)" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2"><i data-lucide="external-link" class="w-4 h-4"></i> Buka dokumen</a>
                         <button @click="closeDetail()" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-semibold">Tutup</button>
                     </div>
@@ -1128,6 +1199,7 @@
         const DEPT_SITE = ['KTT', 'Gudang Handak', 'SHE', 'Technical Service & Planning', 'Mining Operation Production', 'Coal Crushing Plant & Hauling', 'Quality Control', 'Revegetasi & Rehabilitasi', 'Government Relation & CSR', 'Human Capital & Administration', 'Legal Compliance & General Handling'];
         const DEPT_HO = ['Internal Audit', 'CPOC', 'FAT', 'Engineering & Operation', 'Marketing'];
         const DOC_TYPES = ['KPI dan Bukti Pencapaian', 'Job Description', 'IBPR IADL', 'SOP', 'Form', 'IK', 'STD'];
+        const DOC_TYPE_SHORT = ['KPI', 'Jobdesc', 'IBPR', 'SOP', 'Form', 'IK', 'STD'];   // judul kolom singkat di dashboard, urutannya sama dengan DOC_TYPES
         // Sinkronisasi realtime antar pengguna lewat Firebase Realtime Database (lihat README dan firebase-rules.json).
         // Isi dbUrl dan apiKey. Kalau dikosongkan, aplikasi memakai mode data.json (tanpa server).
         const CLOUD = Object.assign({ dbUrl: '', apiKey: '', emailDomain: 'ebl.app' }, (CFG.cloud && typeof CFG.cloud === 'object') ? CFG.cloud : {});
@@ -1342,6 +1414,7 @@
                 activeDept: '',
                 activeType: '',
                 docTypes: DOC_TYPES,
+                docTypeShort: DOC_TYPE_SHORT,
                 deptSite: DEPT_SITE,
                 deptHo: DEPT_HO,
                 findings: [],
@@ -1449,7 +1522,7 @@
 
                 get filteredDocs() {
                     return this.documents.filter(doc => {
-                        let matchModule = this.activeModule === 0 || doc.moduleId === this.activeModule;
+                        let matchModule = this.activeModule === -1 || doc.moduleId === this.activeModule;
                         let matchIso = this.selectedFilterIso === '' || doc.iso.includes(this.selectedFilterIso);
                         let matchSearch = this.searchQuery === '' || 
                             doc.code.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
@@ -1462,6 +1535,67 @@
                 },
 
                 get isFindings() { return this.activeModule === 13; },
+                get isDash() { return this.activeModule === 0; },        // halaman awal: ringkasan saja
+                get isAllDocs() { return this.activeModule === -1; },    // daftar semua dokumen lintas folder
+                pctOf(part, total) { return total ? part / total * 100 : 0; },
+                get folderStats() {
+                    const l = this.filteredDocs, approved = l.filter(d => d.status === 'Approved').length, review = l.filter(d => d.status === 'In Review').length;
+                    return { total: l.length, approved, review, other: l.length - approved - review };
+                },
+                get folderCaption() {
+                    const filtered = this.searchQuery || this.selectedFilterIso || this.selectedFilterReview;
+                    let where = this.isAllDocs ? 'di semua folder' : 'di folder ini';
+                    if (this.isDeptFolder) where = !this.activeDept ? 'dari semua departemen' : (this.activeDept === '__none' ? 'yang belum dikategorikan' : 'milik ' + this.activeDept + (this.activeType ? ', kategori ' + this.activeType : ''));
+                    return (filtered ? 'Sesuai pencarian, ' : 'Terdaftar ') + where;
+                },
+                // Kelengkapan departemen: satu kategori dihitung terisi bila ada minimal satu dokumen yang tidak Obsolete.
+                deptInfo(moduleId, name, pool) {
+                    const mine = (pool || this.documents.filter(d => d.status !== 'Obsolete')).filter(d => d.moduleId === Number(moduleId) && d.dept === name);
+                    const cells = DOC_TYPES.map(t => mine.filter(d => d.docType === t).length);
+                    const filled = cells.filter(n => n > 0).length;
+                    return { name, moduleId: Number(moduleId), docs: mine.length, cells, filled, pct: Math.round(filled / DOC_TYPES.length * 100) };
+                },
+                get dash() {
+                    const docs = this.documents, live = docs.filter(d => d.status !== 'Obsolete');
+                    const approved = docs.filter(d => d.status === 'Approved').length, review = docs.filter(d => d.status === 'In Review').length;
+                    const group = (label, moduleId, names) => {
+                        const rows = names.map(name => this.deptInfo(moduleId, name, live));
+                        const filled = rows.reduce((a, r) => a + r.filled, 0), slots = rows.length * DOC_TYPES.length;
+                        return { label, rows, filled, slots, pct: slots ? Math.round(filled / slots * 100) : 0 };
+                    };
+                    const groups = [group('Departemen Site', 11, DEPT_SITE), group('Departemen HO', 12, DEPT_HO)];
+                    const rows = groups.flatMap(g => g.rows);
+                    const filled = groups.reduce((a, g) => a + g.filled, 0), slots = groups.reduce((a, g) => a + g.slots, 0);
+                    const audit = (type, label) => {
+                        const l = this.findings.filter(x => x.type === type), closed = l.filter(x => x.reviewResult === 'Sesuai').length;
+                        return { type, label, total: l.length, closed, pct: l.length ? Math.round(closed / l.length * 100) : null,
+                            major: l.filter(x => x.status === 'Major').length, minor: l.filter(x => x.status === 'Minor').length, ofi: l.filter(x => x.status === 'OFI').length,
+                            overdue: l.filter(x => this.isOverdue(x)).length };
+                    };
+                    return { total: docs.length, approved, review, other: docs.length - approved - review, groups,
+                        pct: slots ? Math.round(filled / slots * 100) : 0, lengkap: rows.filter(r2 => r2.pct === 100).length, deptTotal: rows.length,
+                        audits: [audit('internal', 'Audit internal'), audit('eksternal', 'Audit eksternal')] };
+                },
+                goDept(moduleId, name) { this.goModule(moduleId); this.activeDept = name; },
+                goAudit(type) { this.goModule(13); this.auditTab = type; },
+                fileKind(doc) {
+                    const kinds = { pdf: ['PDF', 'bg-rose-100 text-rose-700'], doc: ['DOC', 'bg-blue-100 text-blue-700'], docx: ['DOC', 'bg-blue-100 text-blue-700'], xls: ['XLS', 'bg-emerald-100 text-emerald-700'], xlsx: ['XLS', 'bg-emerald-100 text-emerald-700'], ppt: ['PPT', 'bg-orange-100 text-orange-700'], pptx: ['PPT', 'bg-orange-100 text-orange-700'], png: ['IMG', 'bg-purple-100 text-purple-700'], jpg: ['IMG', 'bg-purple-100 text-purple-700'], jpeg: ['IMG', 'bg-purple-100 text-purple-700'] };
+                    const k = doc.file ? kinds[fileExt(doc.file.name)] : null;
+                    if (k) return { label: k[0], cls: k[1], title: doc.file.name + ' (' + this.fmtSize(doc.file.size) + ')' };
+                    if (doc.file) return { label: 'FILE', cls: 'bg-slate-100 text-slate-600', title: doc.file.name };
+                    if (doc.spUrl) return { label: 'LINK', cls: 'bg-slate-100 text-slate-600', title: 'Dokumen berupa tautan' };
+                    return { label: 'KOSONG', cls: 'border border-dashed border-slate-300 text-slate-400 text-[8px]', title: 'Belum ada file' };
+                },
+                onNewDeptChange() {   // memilih departemen menentukan foldernya: Site = folder 11, HO = folder 12
+                    const dp = this.newDoc.dept;
+                    if (DEPT_SITE.includes(dp)) this.newDoc.moduleId = 11;
+                    else if (DEPT_HO.includes(dp)) this.newDoc.moduleId = 12;
+                },
+                onNewFolderChange() {
+                    const list = this.deptsOf(this.newDoc.moduleId);
+                    if (!list.includes(this.newDoc.dept)) this.newDoc.dept = '';
+                    if (!list.length) this.newDoc.docType = '';
+                },
                 get isDeptFolder() { return this.activeModule === 11 || this.activeModule === 12; },
                 get showDeptGrid() { return this.isDeptFolder && !this.activeDept && this.searchQuery === ''; },
                 get docModules() { return this.modules.filter(m => m.id !== 13); },
@@ -1539,31 +1673,31 @@
                     try { return await fbApi.uploadFile(file, moduleId, pct => { this.uploadPct = pct; }); }
                     finally { this.uploadBusy = false; }
                 },
-                async openFile(f, forceDownload) {
+                async openFile(f, download) {
                     if (!f || !f.id || this.fileBusy) return;
                     if (!CLOUD_ON) { alert('File hanya dapat dibuka pada mode realtime.'); return; }
-                    if (!(this.isAdmin || this.isDeptUser)) return this.viewFile(f);   // Viewer: lihat saja, tidak pernah mengunduh
-                    const viewType = forceDownload ? null : FILE_VIEW[fileExt(f.name)];
-                    let w = null;
-                    if (viewType) {
-                        // tab dibuka saat klik (agar tidak diblokir browser), isinya menyusul setelah file selesai diambil
-                        try { w = window.open('', '_blank'); if (w) { w.document.title = f.name || 'Dokumen'; w.document.body.innerHTML = '<p style="font:14px system-ui,sans-serif;padding:24px;color:#475569">Memuat dokumen...</p>'; } } catch (e) { w = null; }
-                    }
+                    if (!(download && (this.isAdmin || this.isDeptUser))) return this.viewFile(f);   // Buka: hanya melihat di layar, untuk semua akun
                     this.fileBusy = f.id;
                     try {
                         const parts = await fbApi.downloadFile(f.id);
-                        const url = URL.createObjectURL(new Blob(parts, { type: viewType || 'application/octet-stream' }));
-                        if (w && !w.closed) w.location.href = url;
-                        else { const a = document.createElement('a'); a.href = url; a.download = f.name || 'dokumen'; document.body.appendChild(a); a.click(); a.remove(); }
-                        setTimeout(() => URL.revokeObjectURL(url), 600000);
-                    } catch (e) {
-                        if (w) { try { w.close(); } catch (x) {} }
-                        alert(e.message || 'Gagal membuka file.');
-                    } finally { this.fileBusy = null; }
+                        const url = URL.createObjectURL(new Blob(parts, { type: 'application/octet-stream' }));
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = f.name || 'dokumen';
+                        document.body.appendChild(a); a.click(); a.remove();
+                        setTimeout(() => URL.revokeObjectURL(url), 60000);
+                    } catch (e) { alert(e.message || 'Gagal mengunduh file.'); }
+                    finally { this.fileBusy = null; }
                 },
                 async viewFile(f) {
                     const ext = fileExt(f.name), type = FILE_VIEW[ext];
-                    if (!type) { alert('Akun Viewer hanya dapat melihat dokumen berformat PDF atau gambar. Dokumen ini berformat ' + (ext ? ext.toUpperCase() : 'lain') + ', jadi minta Document Controller mengunggah versi PDF-nya.'); return; }
+                    if (!type) {
+                        const fmt = ext ? ext.toUpperCase() : 'ini';
+                        alert((this.isAdmin || this.isDeptUser)
+                            ? 'Dokumen berformat ' + fmt + ' tidak dapat ditampilkan di layar. Gunakan tombol Unduh, atau unggah versi PDF agar bisa dilihat semua akun.'
+                            : 'Dokumen berformat ' + fmt + ' tidak dapat ditampilkan di layar. Hanya PDF atau gambar yang bisa dilihat, jadi minta Document Controller mengunggah versi PDF-nya.');
+                        return;
+                    }
                     this.closeViewer();
                     const seq = ++viewSeq;
                     this.docViewer = { open: true, name: f.name || 'Dokumen', loading: true, error: '', pages: 0 };
@@ -1657,7 +1791,7 @@
                 },
 
                 getCurrentModule() {
-                    return this.activeModule === 0 ? { id: 0, name: 'Semua Dokumen' } : (this.modules.find(m => m.id === this.activeModule) || {});
+                    return this.activeModule === 0 ? { id: 0, name: 'Dashboard' } : (this.activeModule === -1 ? { id: -1, name: 'Semua Dokumen' } : (this.modules.find(m => m.id === this.activeModule) || {}));
                 },
 
                 async submitNewDocument() {
@@ -1665,7 +1799,7 @@
                     const mid = parseInt(this.newDoc.moduleId);
                     if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(mid)) { alert('Akun departemen hanya dapat menambah dokumen di folder dokumen departemen.'); return; }
                     const isDept = mid === 11 || mid === 12;
-                    if (isDept && (!this.newDoc.dept || !this.newDoc.docType)) { alert('Pilih departemen dan kategori dokumen.'); return; }
+                    if (isDept && (!this.deptsOf(mid).includes(this.newDoc.dept) || !this.newDoc.docType)) { alert('Pilih departemen dan kategori dokumen.'); return; }
                     let spUrlNew = '', file = null;
                     if (CLOUD_ON) {
                         const picked = this.pickedFile('newDocFile');
