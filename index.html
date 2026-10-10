@@ -298,56 +298,35 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                        <div class="p-5 md:p-6 flex flex-wrap items-end justify-between gap-4 border-b border-slate-200">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 md:p-6">
+                        <div class="flex flex-wrap items-end justify-between gap-4">
                             <div>
                                 <h2 class="text-xl font-bold text-slate-900">Kelengkapan dokumen departemen</h2>
-                                <p class="text-sm text-slate-500 mt-1 max-w-xl">Departemen dinilai lengkap bila punya minimal satu dokumen di setiap kategori. Angka di tiap kotak adalah jumlah dokumennya.</p>
+                                <p class="text-sm text-slate-500 mt-1" x-text="dash.lengkap + ' dari ' + dash.deptTotal + ' departemen sudah lengkap'"></p>
                             </div>
-                            <div class="text-right">
-                                <p class="font-display text-5xl font-extrabold leading-none text-brand-navy" x-text="dash.pct + '%'"></p>
-                                <p class="text-xs text-slate-500 mt-1.5" x-text="dash.lengkap + ' dari ' + dash.deptTotal + ' departemen sudah lengkap'"></p>
+                            <p class="font-display text-5xl font-extrabold leading-none text-brand-navy" x-text="dash.pct + '%'"></p>
+                        </div>
+                        <template x-for="grp in dash.groups" :key="grp.label">
+                            <div class="mt-7">
+                                <div class="flex items-baseline justify-between gap-3 mb-3">
+                                    <h3 class="text-sm font-bold text-slate-700" x-text="grp.label"></h3>
+                                    <span class="text-xs text-slate-500" x-text="grp.pct + '% lengkap'"></span>
+                                </div>
+                                <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                                    <template x-for="d in grp.rows" :key="d.name">
+                                        <button type="button" @click="goDept(d.moduleId, d.name)" class="min-w-0 w-full text-left rounded-xl bg-slate-50 hover:bg-slate-100 px-4 py-3.5 transition-colors">
+                                            <div class="flex items-baseline justify-between gap-3">
+                                                <span class="min-w-0 font-semibold text-sm text-slate-800 truncate" x-text="d.name"></span>
+                                                <span class="font-display font-bold text-base shrink-0" :class="d.pct === 100 ? 'text-brand-leaf' : (d.pct ? 'text-brand-navy' : 'text-slate-400')" x-text="d.pct + '%'"></span>
+                                            </div>
+                                            <div class="mt-2.5 h-1.5 rounded-full bg-slate-200 overflow-hidden"><div class="h-full rounded-full transition-all duration-300" :class="d.pct === 100 ? 'bg-brand-leaf' : 'bg-brand-navy'" :style="'width:' + d.pct + '%'"></div></div>
+                                            <p class="mt-2 text-[11px] text-slate-500" x-text="d.filled + ' dari ' + docTypes.length + ' kategori terisi'"></p>
+                                        </button>
+                                    </template>
+                                </div>
                             </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm min-w-[760px]">
-                                <thead>
-                                    <tr class="text-xs text-slate-500">
-                                        <th class="text-left font-semibold py-3 pl-5 md:pl-6 pr-3">Departemen</th>
-                                        <template x-for="(t, i) in docTypeShort" :key="t">
-                                            <th class="font-semibold py-3 px-1 w-14 text-center" :title="docTypes[i]" x-text="t"></th>
-                                        </template>
-                                        <th class="text-right font-semibold py-3 pl-3 pr-5 md:pr-6 w-44">Kelengkapan</th>
-                                    </tr>
-                                </thead>
-                                <template x-for="grp in dash.groups" :key="grp.label">
-                                    <tbody>
-                                        <tr>
-                                            <th :colspan="docTypes.length + 2" class="text-left bg-slate-50 border-y border-slate-200 px-5 md:px-6 py-2 text-xs font-bold text-slate-600" x-text="grp.label + ', ' + grp.pct + '% lengkap'"></th>
-                                        </tr>
-                                        <template x-for="d in grp.rows" :key="d.name">
-                                            <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
-                                                <td class="py-2 pl-5 md:pl-6 pr-3">
-                                                    <button type="button" @click="goDept(d.moduleId, d.name)" class="text-left font-medium text-slate-800 hover:text-brand-navy hover:underline" x-text="d.name"></button>
-                                                    <span class="md:hidden block text-[11px] text-slate-500" x-text="d.pct + '% lengkap'"></span>
-                                                </td>
-                                                <template x-for="(n, i) in d.cells" :key="i">
-                                                    <td class="py-2 px-1 text-center">
-                                                        <span class="inline-flex w-10 h-8 items-center justify-center rounded-md text-xs font-bold" :class="n ? 'bg-brand-leaf text-white' : 'bg-slate-100 text-slate-400'" :title="docTypes[i] + ': ' + n + ' dokumen'" x-text="n || '0'"></span>
-                                                    </td>
-                                                </template>
-                                                <td class="py-2 pl-3 pr-5 md:pr-6">
-                                                    <div class="flex items-center justify-end gap-3">
-                                                        <div class="w-20 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full" :class="d.pct === 100 ? 'bg-brand-leaf' : 'bg-brand-navy'" :style="'width:' + d.pct + '%'"></div></div>
-                                                        <span class="w-11 text-right font-display font-bold" :class="d.pct === 100 ? 'text-brand-leaf' : 'text-slate-800'" x-text="d.pct + '%'"></span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </template>
-                            </table>
-                        </div>
+                        </template>
+                        <p class="mt-5 text-xs text-slate-400">Lengkap berarti ada minimal satu dokumen di setiap kategori. Klik departemen untuk melihat dokumennya.</p>
                     </div>
 
                     <div class="grid lg:grid-cols-2 gap-6">
@@ -401,25 +380,21 @@
                 <!-- Navigasi Departemen (folder 11 dan 12) -->
                 <section x-show="isDeptFolder" x-cloak class="space-y-4">
                     <div x-show="showDeptGrid">
-                        <p class="text-sm text-slate-500 mb-3">Pilih departemen untuk melihat dokumennya. Garis di tiap kartu menunjukkan kategori dokumen yang sudah terisi.</p>
-                        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <p class="text-sm text-slate-500 mb-3">Pilih departemen untuk melihat dokumennya.</p>
+                        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
                             <template x-for="dp in currentDepts" :key="dp">
-                                <button @click="activeDept = dp; activeType = ''" class="text-left bg-white border border-slate-200 hover:border-brand-navy hover:shadow-md rounded-2xl p-5 transition">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <p class="font-display font-bold text-slate-900 leading-snug" x-text="dp"></p>
-                                        <span class="font-display font-extrabold text-xl leading-none shrink-0" :class="deptInfo(activeModule, dp).pct === 100 ? 'text-brand-leaf' : (deptInfo(activeModule, dp).pct ? 'text-brand-navy' : 'text-slate-300')" x-text="deptInfo(activeModule, dp).pct + '%'"></span>
+                                <button @click="activeDept = dp; activeType = ''" class="min-w-0 w-full text-left bg-white border border-slate-200 hover:border-brand-navy rounded-xl px-4 py-3.5 transition-colors">
+                                    <div class="flex items-baseline justify-between gap-3">
+                                        <span class="min-w-0 font-semibold text-sm text-slate-800 truncate" x-text="dp"></span>
+                                        <span class="font-display font-bold text-base shrink-0" :class="deptInfo(activeModule, dp).pct === 100 ? 'text-brand-leaf' : (deptInfo(activeModule, dp).pct ? 'text-brand-navy' : 'text-slate-400')" x-text="deptInfo(activeModule, dp).pct + '%'"></span>
                                     </div>
-                                    <p class="text-xs text-slate-500 mt-1.5" x-text="deptInfo(activeModule, dp).docs + ' dokumen, ' + deptInfo(activeModule, dp).filled + ' dari ' + docTypes.length + ' kategori terisi'"></p>
-                                    <div class="mt-4 flex gap-1">
-                                        <template x-for="(n, i) in deptInfo(activeModule, dp).cells" :key="i">
-                                            <span class="h-1.5 flex-1 rounded-full" :class="n ? 'bg-brand-leaf' : 'bg-slate-200'" :title="docTypes[i] + ': ' + n + ' dokumen'"></span>
-                                        </template>
-                                    </div>
+                                    <div class="mt-2.5 h-1.5 rounded-full bg-slate-200 overflow-hidden"><div class="h-full rounded-full transition-all duration-300" :class="deptInfo(activeModule, dp).pct === 100 ? 'bg-brand-leaf' : 'bg-brand-navy'" :style="'width:' + deptInfo(activeModule, dp).pct + '%'"></div></div>
+                                    <p class="mt-2 text-[11px] text-slate-500" x-text="deptInfo(activeModule, dp).docs + ' dokumen, ' + deptInfo(activeModule, dp).filled + ' dari ' + docTypes.length + ' kategori terisi'"></p>
                                 </button>
                             </template>
-                            <button x-show="uncatCount() > 0" @click="activeDept = '__none'; activeType = ''" class="text-left bg-white border border-dashed border-slate-300 hover:border-brand-navy rounded-2xl p-5 transition">
-                                <p class="font-display font-bold text-slate-700 leading-snug">Belum dikategorikan</p>
-                                <p class="text-xs text-slate-500 mt-1.5" x-text="uncatCount() + ' dokumen. Tentukan departemennya lewat tombol edit.'"></p>
+                            <button x-show="uncatCount() > 0" @click="activeDept = '__none'; activeType = ''" class="text-left bg-white border border-dashed border-slate-300 hover:border-brand-navy rounded-xl px-4 py-3.5 transition-colors">
+                                <p class="font-semibold text-sm text-slate-700">Belum dikategorikan</p>
+                                <p class="text-[11px] text-slate-500 mt-2" x-text="uncatCount() + ' dokumen. Tentukan departemennya lewat tombol edit.'"></p>
                             </button>
                         </div>
                     </div>
