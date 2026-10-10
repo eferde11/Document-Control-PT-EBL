@@ -320,13 +320,13 @@
                                                 <span class="font-display font-bold text-base shrink-0" :class="d.pct === 100 ? 'text-brand-leaf' : (d.pct ? 'text-brand-navy' : 'text-slate-400')" x-text="d.pct + '%'"></span>
                                             </div>
                                             <div class="mt-2.5 h-1.5 rounded-full bg-slate-200 overflow-hidden"><div class="h-full rounded-full transition-all duration-300" :class="d.pct === 100 ? 'bg-brand-leaf' : 'bg-brand-navy'" :style="'width:' + d.pct + '%'"></div></div>
-                                            <p class="mt-2 text-[11px] text-slate-500" x-text="d.filled + ' dari ' + docTypes.length + ' kategori terisi'"></p>
+                                            <p class="mt-2 text-[11px] text-slate-500" x-text="d.filled + ' dari ' + docTypes.length + ' jenis dokumen terisi'"></p>
                                         </button>
                                     </template>
                                 </div>
                             </div>
                         </template>
-                        <p class="mt-5 text-xs text-slate-400">Lengkap berarti ada minimal satu dokumen di setiap kategori. Klik departemen untuk melihat dokumennya.</p>
+                        <p class="mt-5 text-xs text-slate-400">Lengkap berarti ada minimal satu dokumen untuk setiap jenis dokumen. Klik departemen untuk melihat dokumennya.</p>
                     </div>
 
                     <div class="grid lg:grid-cols-2 gap-6">
@@ -389,7 +389,7 @@
                                         <span class="font-display font-bold text-base shrink-0" :class="deptInfo(activeModule, dp).pct === 100 ? 'text-brand-leaf' : (deptInfo(activeModule, dp).pct ? 'text-brand-navy' : 'text-slate-400')" x-text="deptInfo(activeModule, dp).pct + '%'"></span>
                                     </div>
                                     <div class="mt-2.5 h-1.5 rounded-full bg-slate-200 overflow-hidden"><div class="h-full rounded-full transition-all duration-300" :class="deptInfo(activeModule, dp).pct === 100 ? 'bg-brand-leaf' : 'bg-brand-navy'" :style="'width:' + deptInfo(activeModule, dp).pct + '%'"></div></div>
-                                    <p class="mt-2 text-[11px] text-slate-500" x-text="deptInfo(activeModule, dp).docs + ' dokumen, ' + deptInfo(activeModule, dp).filled + ' dari ' + docTypes.length + ' kategori terisi'"></p>
+                                    <p class="mt-2 text-[11px] text-slate-500" x-text="deptInfo(activeModule, dp).docs + ' dokumen, ' + deptInfo(activeModule, dp).filled + ' dari ' + docTypes.length + ' jenis dokumen terisi'"></p>
                                 </button>
                             </template>
                             <button x-show="uncatCount() > 0" @click="activeDept = '__none'; activeType = ''" class="text-left bg-white border border-dashed border-slate-300 hover:border-brand-navy rounded-xl px-4 py-3.5 transition-colors">
@@ -398,17 +398,35 @@
                             </button>
                         </div>
                     </div>
-                    <div x-show="activeDept" class="space-y-3">
+                    <div x-show="activeDept" class="space-y-4">
                         <div class="flex items-center gap-2 text-sm flex-wrap">
                             <button @click="activeDept = ''; activeType = ''; searchQuery = ''" class="text-brand-navy font-semibold hover:underline flex items-center gap-1"><i data-lucide="chevron-left" class="w-4 h-4"></i> Semua departemen</button>
                             <span class="text-slate-300">/</span>
-                            <span class="font-display font-bold text-slate-900" x-text="activeDept === '__none' ? 'Belum dikategorikan' : activeDept"></span>
+                            <button x-show="activeType" @click="activeType = ''; searchQuery = ''" class="text-brand-navy font-semibold hover:underline" x-text="activeDept === '__none' ? 'Belum dikategorikan' : activeDept"></button>
+                            <span x-show="!activeType" class="font-display font-bold text-slate-900" x-text="activeDept === '__none' ? 'Belum dikategorikan' : activeDept"></span>
+                            <span x-show="activeType" class="text-slate-300">/</span>
+                            <span x-show="activeType" class="font-display font-bold text-slate-900" x-text="activeType === '__none' ? 'Tanpa jenis dokumen' : activeType"></span>
                         </div>
-                        <div class="flex gap-2 overflow-x-auto pb-1">
-                            <button @click="activeType = ''" :class="activeType === '' ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white text-slate-600 border-slate-200 hover:border-brand-navy'" class="px-3.5 py-2 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors">Semua <span class="opacity-70" x-text="typeCount('')"></span></button>
-                            <template x-for="t in docTypes" :key="t">
-                                <button @click="activeType = t" :class="activeType === t ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white text-slate-600 border-slate-200 hover:border-brand-navy'" class="px-3.5 py-2 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors"><span x-text="t"></span> <span class="opacity-70" x-text="typeCount(t)"></span></button>
-                            </template>
+                        <div x-show="showTypeGrid">
+                            <p class="text-sm text-slate-500 mb-3">Pilih jenis dokumen untuk melihat isinya.</p>
+                            <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                                <template x-for="t in docTypes" :key="t">
+                                    <button @click="activeType = t" class="min-w-0 w-full text-left rounded-xl px-4 py-3.5 transition-colors flex items-center gap-3 border" :class="typeCount(t) ? 'bg-white border-slate-200 hover:border-brand-navy' : 'bg-slate-50 border-dashed border-slate-300 hover:border-brand-navy'">
+                                        <span class="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center" :class="typeCount(t) ? 'bg-brand-navy/10 text-brand-navy' : 'bg-slate-200/70 text-slate-400'"><i data-lucide="folder" class="w-5 h-5"></i></span>
+                                        <span class="min-w-0">
+                                            <span class="block font-semibold text-sm text-slate-800 leading-snug" x-text="t"></span>
+                                            <span class="block text-[11px] mt-0.5" :class="typeCount(t) ? 'text-slate-500' : 'text-slate-400'" x-text="typeCount(t) ? typeCount(t) + ' dokumen' : 'Belum ada dokumen'"></span>
+                                        </span>
+                                    </button>
+                                </template>
+                                <button x-show="typeCount('__none') > 0" @click="activeType = '__none'" class="min-w-0 w-full text-left rounded-xl px-4 py-3.5 transition-colors flex items-center gap-3 border border-dashed border-slate-300 bg-white hover:border-brand-navy">
+                                    <span class="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center bg-slate-200/70 text-slate-500"><i data-lucide="folder-question" class="w-5 h-5"></i></span>
+                                    <span class="min-w-0">
+                                        <span class="block font-semibold text-sm text-slate-700 leading-snug">Tanpa jenis dokumen</span>
+                                        <span class="block text-[11px] text-slate-500 mt-0.5" x-text="typeCount('__none') + ' dokumen, tentukan jenisnya lewat tombol edit'"></span>
+                                    </span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -542,7 +560,7 @@
                 </div>
 
                 <!-- Daftar dokumen -->
-                <div x-show="!isFindings && !isDash && !showDeptGrid" class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div x-show="!isFindings && !isDash && !showDeptGrid && !showTypeGrid" class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                     <ul class="divide-y divide-slate-100">
                         <template x-for="doc in filteredDocs" :key="doc.id">
                             <li class="px-4 md:px-5 py-4 flex flex-col lg:flex-row lg:items-start gap-x-6 gap-y-3 hover:bg-slate-50 transition-colors">
@@ -564,7 +582,7 @@
                                         </div>
                                         <p class="font-semibold text-[15px] text-slate-900 leading-snug mt-1.5" x-text="doc.title"></p>
                                         <p x-show="isAllDocs" class="text-[11px] font-semibold text-emerald-700 mt-1" x-text="folderName(doc.moduleId)"></p>
-                                        <p x-show="doc.dept" class="text-[11px] font-semibold text-emerald-700 mt-1" x-text="doc.dept + ', ' + (doc.docType || 'tanpa kategori')"></p>
+                                        <p x-show="doc.dept" class="text-[11px] font-semibold text-emerald-700 mt-1" x-text="doc.dept + ', ' + (doc.docType || 'tanpa jenis dokumen')"></p>
                                         <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
                                             <span class="px-2.5 py-1 text-[11px] rounded-full font-semibold inline-flex items-center gap-1.5"
                                                   :class="{
@@ -645,30 +663,42 @@
                 </button>
             </div>
             <form @submit.prevent="submitNewDocument" class="p-6 space-y-4 text-xs">
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Folder</label>
-                    <select x-model="newDoc.moduleId" @change="onNewFolderChange()" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
-                        <template x-for="mod in formModules" :key="mod.id">
+                <div x-show="isAdmin">
+                    <span class="block font-semibold text-slate-700 mb-1">Dokumen apa yang diunggah?</span>
+                    <div class="grid grid-cols-2 gap-1 p-1 rounded-lg bg-slate-100">
+                        <button type="button" @click="setNewKind('umum')" :class="newDocKind === 'umum' ? 'bg-white text-brand-navy shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-3 py-2 rounded-md font-semibold transition-colors">Dokumen ISO umum</button>
+                        <button type="button" @click="setNewKind('dept')" :class="newDocKind === 'dept' ? 'bg-white text-brand-navy shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-3 py-2 rounded-md font-semibold transition-colors">Dokumen departemen</button>
+                    </div>
+                </div>
+                <div x-show="newDocKind === 'umum'">
+                    <label class="block font-semibold text-slate-700 mb-1">Jenis dokumen</label>
+                    <select x-model="newDoc.moduleId" :required="newDocKind === 'umum'" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <template x-for="mod in generalModules" :key="mod.id">
                             <option :value="mod.id" x-text="mod.name"></option>
                         </template>
                     </select>
                 </div>
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Departemen pemilik dokumen</label>
-                    <select x-model="newDoc.dept" @change="onNewDeptChange()" :required="isDeptId(newDoc.moduleId)" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        <option value="" x-text="isAdmin ? 'Bukan dokumen departemen' : 'Pilih departemen'"></option>
-                        <optgroup label="Site"><template x-for="dp in deptSite" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
-                        <optgroup label="HO"><template x-for="dp in deptHo" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
-                    </select>
-                    <p class="text-slate-400 mt-1" x-text="newDoc.dept ? 'Dokumen akan masuk ke ' + folderName(parseInt(newDoc.moduleId)) + ', departemen ' + newDoc.dept + '.' : (isDeptId(newDoc.moduleId) ? 'Folder ini wajib memilih departemen.' : 'Memilih departemen otomatis memindahkan dokumen ke folder Dokumen Departemen (Site atau HO).')"></p>
+                <div x-show="newDocKind === 'dept'" class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Departemen</label>
+                        <select x-model="newDoc.dept" @change="onNewDeptChange()" :required="newDocKind === 'dept'" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="">Pilih departemen</option>
+                            <optgroup label="Site"><template x-for="dp in deptSite" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
+                            <optgroup label="HO"><template x-for="dp in deptHo" :key="dp"><option :value="dp" x-text="dp"></option></template></optgroup>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Jenis dokumen</label>
+                        <select x-model="newDoc.docType" :required="newDocKind === 'dept'" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="">Pilih jenis dokumen</option>
+                            <template x-for="t in docTypes" :key="t"><option :value="t" x-text="t"></option></template>
+                        </select>
+                    </div>
                 </div>
-                <div x-show="isDeptId(newDoc.moduleId)">
-                    <label class="block font-semibold text-slate-700 mb-1">Kategori dokumen</label>
-                    <select x-model="newDoc.docType" :required="isDeptId(newDoc.moduleId)" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        <option value="">Pilih kategori</option>
-                        <template x-for="t in docTypes" :key="t"><option :value="t" x-text="t"></option></template>
-                    </select>
-                </div>
+                <p class="flex items-start gap-2 rounded-lg bg-brand-navy/5 text-brand-navy px-3 py-2.5">
+                    <i data-lucide="folder-input" class="w-4 h-4 shrink-0 mt-px"></i>
+                    <span><span class="font-semibold">Disimpan ke:</span> <span x-text="newDocDest"></span></span>
+                </p>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block font-semibold text-slate-700 mb-1">Nomor Dokumen</label>
@@ -846,9 +876,9 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Kategori</label>
+                        <label class="block font-semibold text-slate-700 mb-1">Jenis dokumen</label>
                         <select x-model="editForm.docType" class="w-full border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                            <option value="">Pilih kategori</option>
+                            <option value="">Pilih jenis dokumen</option>
                             <template x-for="t in docTypes" :key="t"><option :value="t" x-text="t"></option></template>
                         </select>
                     </div>
@@ -1597,7 +1627,7 @@
                             doc.title.toLowerCase().includes(this.searchQuery.toLowerCase());
                         let matchReview = this.selectedFilterReview === '' || (doc.reviewStatus || 'Belum Direview') === this.selectedFilterReview;
                         let matchDept = !(this.isDeptFolder && this.activeDept) || (this.activeDept === '__none' ? !doc.dept : doc.dept === this.activeDept);
-                        let matchType = !(this.isDeptFolder && this.activeType) || doc.docType === this.activeType;
+                        let matchType = !(this.isDeptFolder && this.activeType) || (this.activeType === '__none' ? !doc.docType : doc.docType === this.activeType);
                         return matchModule && matchIso && matchSearch && matchReview && matchDept && matchType;
                     });
                 },
@@ -1613,10 +1643,10 @@
                 get folderCaption() {
                     const filtered = this.searchQuery || this.selectedFilterIso || this.selectedFilterReview;
                     let where = this.isAllDocs ? 'di semua folder' : 'di folder ini';
-                    if (this.isDeptFolder) where = !this.activeDept ? 'dari semua departemen' : (this.activeDept === '__none' ? 'yang belum dikategorikan' : 'milik ' + this.activeDept + (this.activeType ? ', kategori ' + this.activeType : ''));
+                    if (this.isDeptFolder) where = !this.activeDept ? 'dari semua departemen' : (this.activeDept === '__none' ? 'yang belum dikategorikan' : 'milik ' + this.activeDept + (this.activeType ? (this.activeType === '__none' ? ', tanpa jenis dokumen' : ', jenis ' + this.activeType) : ''));
                     return (filtered ? 'Sesuai pencarian, ' : 'Terdaftar ') + where;
                 },
-                // Kelengkapan departemen: satu kategori dihitung terisi bila ada minimal satu dokumen yang tidak Obsolete.
+                // Kelengkapan departemen: satu jenis dokumen dihitung terisi bila ada minimal satu dokumen yang tidak Obsolete.
                 deptInfo(moduleId, name, pool) {
                     const mine = (pool || this.documents.filter(d => d.status !== 'Obsolete')).filter(d => d.moduleId === Number(moduleId) && d.dept === name);
                     const cells = DOC_TYPES.map(t => mine.filter(d => d.docType === t).length);
@@ -1666,6 +1696,21 @@
                 },
                 get isDeptFolder() { return this.activeModule === 11 || this.activeModule === 12; },
                 get showDeptGrid() { return this.isDeptFolder && !this.activeDept && this.searchQuery === ''; },
+                // Di dalam satu departemen, tiap jenis dokumen tampil sebagai folder. Daftar dokumen muncul setelah jenisnya dipilih atau saat mencari.
+                get showTypeGrid() { return this.isDeptFolder && !!this.activeDept && this.activeDept !== '__none' && !this.activeType && this.searchQuery === ''; },
+                get generalModules() { return this.formModules.filter(m => !this.isDeptId(m.id)); },
+                get newDocKind() { return (this.isDeptId(this.newDoc.moduleId) || !this.generalModules.length) ? 'dept' : 'umum'; },
+                get newDocDest() {
+                    const mid = parseInt(this.newDoc.moduleId);
+                    if (this.newDocKind === 'umum') return this.folderName(mid) || 'pilih jenis dokumen';
+                    if (!this.newDoc.dept) return 'pilih departemen dan jenis dokumennya';
+                    return this.folderName(mid) + ' / ' + this.newDoc.dept + ' / ' + (this.newDoc.docType || 'pilih jenis dokumen');
+                },
+                setNewKind(kind) {
+                    if (kind === this.newDocKind) return;
+                    if (kind === 'dept') { this.newDoc.moduleId = DEPT_HO.includes(this.newDoc.dept) ? 12 : 11; }
+                    else { this.newDoc.moduleId = this.generalModules[0].id; this.newDoc.dept = ''; this.newDoc.docType = ''; }
+                },
                 get docModules() { return this.modules.filter(m => m.id !== 13); },
                 get currentDepts() { return this.deptsOf(this.activeModule); },
                 get findingsShown() {
@@ -1877,7 +1922,7 @@
                     const mid = parseInt(this.newDoc.moduleId);
                     if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(mid)) { alert('Akun departemen hanya dapat menambah dokumen di folder dokumen departemen.'); return; }
                     const isDept = mid === 11 || mid === 12;
-                    if (isDept && (!this.deptsOf(mid).includes(this.newDoc.dept) || !this.newDoc.docType)) { alert('Pilih departemen dan kategori dokumen.'); return; }
+                    if (isDept && (!this.deptsOf(mid).includes(this.newDoc.dept) || !this.newDoc.docType)) { alert('Pilih departemen dan jenis dokumennya.'); return; }
                     let spUrlNew = '', file = null;
                     if (CLOUD_ON) {
                         const picked = this.pickedFile('newDocFile');
@@ -2185,14 +2230,14 @@
                 typeCount(t) {
                     return this.documents.filter(d => d.moduleId === this.activeModule
                         && (this.activeDept === '__none' ? !d.dept : d.dept === this.activeDept)
-                        && (!t || d.docType === t)).length;
+                        && (!t || (t === '__none' ? !d.docType : d.docType === t))).length;
                 },
                 openAdd() {
                     if (!this.canAdd) return;
                     if (this.activeModule > 0 && !this.isFindings) this.newDoc.moduleId = this.activeModule;
                     if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(parseInt(this.newDoc.moduleId))) this.newDoc.moduleId = DEPT_EDIT_FOLDERS[0];
                     this.newDoc.dept = (this.isDeptFolder && this.activeDept && this.activeDept !== '__none') ? this.activeDept : '';
-                    this.newDoc.docType = this.isDeptFolder ? this.activeType : '';
+                    this.newDoc.docType = (this.isDeptFolder && this.activeType !== '__none') ? this.activeType : '';
                     this.clearFile('newDocFile');
                     this.showUploadModal = true;
                     this.$nextTick(() => { lucide.createIcons(); });
@@ -2338,7 +2383,7 @@
                     if (!this.isAdmin && !DEPT_EDIT_FOLDERS.includes(moduleId)) { this.editError = 'Akun departemen hanya dapat memindahkan dokumen di folder dokumen departemen.'; return; }
                     const newStatus = this.isAdmin ? f.status : 'In Review';
                     const dept = isDept ? f.dept : '', docType = isDept ? f.docType : '';
-                    if (isDept && (!dept || !docType)) { this.editError = 'Pilih departemen dan kategori dokumen.'; return; }
+                    if (isDept && (!dept || !docType)) { this.editError = 'Pilih departemen dan jenis dokumennya.'; return; }
                     const picked = CLOUD_ON ? this.pickedFile('editDocFile') : null;
                     if (CLOUD_ON) {
                         if (picked) { const prob = this.fileProblem(picked); if (prob) { this.editError = prob; return; } }
@@ -2353,7 +2398,7 @@
                     if (newStatus !== d.status) changes.push('Status: ' + d.status + ' menjadi ' + newStatus);
                     if (moduleId !== d.moduleId) changes.push('Dipindahkan ke folder ' + this.folderName(moduleId));
                     if (dept !== (d.dept || '')) changes.push('Departemen: ' + (d.dept || '-') + ' menjadi ' + (dept || '-'));
-                    if (docType !== (d.docType || '')) changes.push('Kategori: ' + (d.docType || '-') + ' menjadi ' + (docType || '-'));
+                    if (docType !== (d.docType || '')) changes.push('Jenis dokumen: ' + (d.docType || '-') + ' menjadi ' + (docType || '-'));
                     if (spChanged) changes.push('Link dokumen diperbarui');
                     if (picked) changes.push('File dokumen diperbarui (' + picked.name + ')');
                     if (!changes.length) { this.editError = 'Belum ada perubahan. Ubah data atau file dokumen terlebih dahulu.'; return; }
