@@ -22,6 +22,7 @@
     </script>
     <style>
         [x-cloak] { display: none !important; }
+        @media print { .no-print { display: none !important; } }
         body { -webkit-font-smoothing: antialiased; }
         h1, h2, h3, .font-display { font-family: 'Bricolage Grotesque', 'IBM Plex Sans', sans-serif; letter-spacing: -0.01em; }
         :focus-visible { outline: 2px solid #C8902E; outline-offset: 2px; }
@@ -573,6 +574,20 @@
     </div>
 
     <!-- Modal Upload Dokumen -->
+    <!-- Penampil dokumen untuk akun Viewer: lihat saja, tanpa tombol unduh atau cetak -->
+    <div x-show="docViewer.open" x-cloak class="no-print fixed inset-0 z-[80] bg-slate-900 flex flex-col" style="-webkit-user-select:none;user-select:none" @contextmenu.prevent @dragstart.prevent @keydown.escape.window="docViewer.open && closeViewer()" @keydown.window="viewerKeys($event)">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 bg-slate-950 text-white border-b border-slate-700">
+            <div class="min-w-0">
+                <p class="font-semibold text-sm truncate" x-text="docViewer.name"></p>
+                <p class="text-[11px] text-slate-400" x-text="(docViewer.pages ? docViewer.pages + ' halaman · ' : '') + 'Mode lihat saja'"></p>
+            </div>
+            <button type="button" @click="closeViewer()" class="shrink-0 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-semibold">Tutup</button>
+        </div>
+        <p x-show="docViewer.loading" class="text-center text-slate-300 text-sm py-10">Memuat dokumen...</p>
+        <p x-show="docViewer.error" x-text="docViewer.error" class="text-center text-rose-300 text-sm py-10 px-6"></p>
+        <div x-ref="viewerBody" class="flex-1 overflow-auto p-2 sm:p-4"></div>
+    </div>
+
     <div x-show="showUploadModal" x-transition.opacity.duration.150ms class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
         <div class="bg-white modal-card rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border">
             <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b-2 border-ochre-500">
@@ -750,7 +765,7 @@
                     <p x-show="!detailDoc.spUrl && !detailDoc.file" class="p-4 bg-slate-50 border border-dashed rounded-lg text-slate-500 text-center">Dokumen ini belum memiliki file. Admin dapat mengunggahnya lewat tombol edit.</p>
                     <p x-show="detailDoc.file" class="text-slate-500 flex items-center gap-1.5"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i> <span x-text="detailDoc.file ? detailDoc.file.name + ' · ' + fmtSize(detailDoc.file.size) : ''"></span></p>
                     <div class="pt-4 border-t flex justify-end gap-2">
-                        <button type="button" x-show="detailDoc.file && canOpenSp" @click="openFile(detailDoc.file, true)" :disabled="!!fileBusy" class="px-4 py-2 border border-sky-600 text-sky-700 hover:bg-sky-50 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
+                        <button type="button" x-show="detailDoc.file && (isAdmin || isDeptUser)" @click="openFile(detailDoc.file, true)" :disabled="!!fileBusy" class="px-4 py-2 border border-sky-600 text-sky-700 hover:bg-sky-50 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="download" class="w-4 h-4"></i> Unduh</button>
                         <button type="button" x-show="detailDoc.file && canOpenSp" @click="openFile(detailDoc.file)" :disabled="!!fileBusy" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2 disabled:opacity-60"><i data-lucide="file-text" class="w-4 h-4"></i> <span x-text="fileBusy ? 'Memuat...' : 'Buka dokumen'"></span></button>
                         <a x-show="!detailDoc.file && detailDoc.spUrl && canOpenSp" :href="safeUrl(detailDoc.spUrl)" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold flex items-center gap-2"><i data-lucide="external-link" class="w-4 h-4"></i> Buka dokumen</a>
                         <button @click="closeDetail()" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-semibold">Tutup</button>
@@ -1248,6 +1263,69 @@
                 if (!r.ok) throw new Error('Server menolak perubahan (kode ' + r.status + ').');
             }
         };
+        // ---------- Penampil dokumen di dalam halaman (akun Viewer: lihat saja, tanpa unduh) ----------
+        // PDF digambar halaman demi halaman ke kanvas memakai pdf.js, jadi tidak ada tombol unduh atau cetak dari browser.
+        const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/';
+        let pdfJsPromise = null, viewerCleanup = null, viewSeq = 0;
+        const loadPdfJs = () => {
+            if (!pdfJsPromise) pdfJsPromise = import(PDFJS_BASE + 'legacy/build/pdf.min.mjs')
+                .then(lib => { lib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'legacy/build/pdf.worker.min.mjs'; return lib; })
+                .catch(() => { pdfJsPromise = null; throw new Error('Penampil PDF gagal dimuat. Periksa koneksi internet lalu coba lagi.'); });
+            return pdfJsPromise;
+        };
+        const renderPdfInto = async (parts, body) => {
+            const lib = await loadPdfJs();
+            let total = 0;
+            parts.forEach(p => { total += p.length; });
+            const data = new Uint8Array(total);
+            let off = 0;
+            parts.forEach(p => { data.set(p, off); off += p.length; });
+            const task = lib.getDocument({ data, cMapUrl: PDFJS_BASE + 'cmaps/', cMapPacked: true, standardFontDataUrl: PDFJS_BASE + 'standard_fonts/', wasmUrl: PDFJS_BASE + 'wasm/', iccUrl: PDFJS_BASE + 'iccs/' });
+            let pdf;
+            try { pdf = await task.promise; }
+            catch (e) { throw new Error(e && e.name === 'PasswordException' ? 'PDF ini dilindungi kata sandi sehingga tidak dapat ditampilkan.' : 'File PDF tidak dapat dibaca.'); }
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const cssW = Math.max(240, Math.min(body.clientWidth - 16, 1000));
+            const b1 = (await pdf.getPage(1)).getViewport({ scale: 1 });
+            let alive = true;
+            // Hanya halaman di sekitar layar yang digambar, dan dilepas lagi saat jauh, supaya PDF ratusan halaman tidak menghabiskan memori.
+            const release = cv => { if (cv._state === 2) { cv.width = cv.height = 0; cv._state = 0; } };
+            const draw = async cv => {
+                if (!alive || cv._state) return;
+                cv._state = 1;
+                try {
+                    const page = await pdf.getPage(cv._n);
+                    const b = page.getViewport({ scale: 1 });
+                    const vp = page.getViewport({ scale: cssW / b.width * dpr });
+                    cv.width = Math.floor(vp.width);
+                    cv.height = Math.floor(vp.height);
+                    cv.style.height = Math.round(cssW * b.height / b.width) + 'px';
+                    await page.render({ canvas: cv, canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+                    cv._state = 2;
+                    if (!cv._want) release(cv);
+                } catch (e) { cv._state = 0; }
+            };
+            const io = new IntersectionObserver(entries => entries.forEach(en => { const cv = en.target; cv._want = en.isIntersecting; if (cv._want) draw(cv); else release(cv); }), { root: body, rootMargin: '1500px 0px' });
+            for (let n = 1; n <= pdf.numPages; n++) {
+                const cv = document.createElement('canvas');
+                cv._n = n; cv._state = 0; cv._want = false;
+                cv.width = cv.height = 0;
+                cv.style.cssText = 'display:block;margin:0 auto 12px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5);width:' + cssW + 'px;height:' + Math.round(cssW * b1.height / b1.width) + 'px';
+                body.appendChild(cv);
+                io.observe(cv);
+            }
+            return { pages: pdf.numPages, destroy() { alive = false; io.disconnect(); try { task.destroy(); } catch (e) {} body.innerHTML = ''; } };
+        };
+        const renderImageInto = (parts, type, body) => {
+            const url = URL.createObjectURL(new Blob(parts, { type }));
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = '';
+            img.draggable = false;
+            img.style.cssText = 'display:block;margin:0 auto;max-width:100%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5)';
+            body.appendChild(img);
+            return { pages: 0, destroy() { URL.revokeObjectURL(url); body.innerHTML = ''; } };
+        };
         let published = null; // data publik terakhir (dari data.json atau contoh bawaan)
         let uidSeq = 0;
         const uid = () => Date.now() * 1000 + (uidSeq = (uidSeq + 1) % 1000);
@@ -1323,6 +1401,7 @@
                 uploadBusy: false,
                 uploadPct: 0,
                 fileBusy: null,
+                docViewer: { open: false, name: '', loading: false, error: '', pages: 0 },
                 fileMaxMb: FILE_MAX_MB,
                 remoteWaiting: false,
                 lastEvent: 0,
@@ -1400,6 +1479,7 @@
                 },
                 get isAdmin() { return !!this.user && this.user.role === 'admin'; },
                 get isDeptUser() { return !!this.user && this.user.role === 'dept'; },
+                get isViewerRole() { return !!this.user && !this.isAdmin && !this.isDeptUser; },
                 get canAdd() { return this.isAdmin || this.isDeptUser; },
                 get formModules() { return this.isAdmin ? this.docModules : this.docModules.filter(m => DEPT_EDIT_FOLDERS.includes(m.id)); },
                 get canOpenSp() { return this.isAdmin || this.isDeptUser || VIEWER_CAN_OPEN_SHAREPOINT; },
@@ -1462,6 +1542,7 @@
                 async openFile(f, forceDownload) {
                     if (!f || !f.id || this.fileBusy) return;
                     if (!CLOUD_ON) { alert('File hanya dapat dibuka pada mode realtime.'); return; }
+                    if (!(this.isAdmin || this.isDeptUser)) return this.viewFile(f);   // Viewer: lihat saja, tidak pernah mengunduh
                     const viewType = forceDownload ? null : FILE_VIEW[fileExt(f.name)];
                     let w = null;
                     if (viewType) {
@@ -1479,6 +1560,35 @@
                         if (w) { try { w.close(); } catch (x) {} }
                         alert(e.message || 'Gagal membuka file.');
                     } finally { this.fileBusy = null; }
+                },
+                async viewFile(f) {
+                    const ext = fileExt(f.name), type = FILE_VIEW[ext];
+                    if (!type) { alert('Akun Viewer hanya dapat melihat dokumen berformat PDF atau gambar. Dokumen ini berformat ' + (ext ? ext.toUpperCase() : 'lain') + ', jadi minta Document Controller mengunggah versi PDF-nya.'); return; }
+                    this.closeViewer();
+                    const seq = ++viewSeq;
+                    this.docViewer = { open: true, name: f.name || 'Dokumen', loading: true, error: '', pages: 0 };
+                    this.fileBusy = f.id;
+                    try {
+                        const parts = await fbApi.downloadFile(f.id);
+                        await new Promise(res => this.$nextTick(res));   // pastikan penampil sudah tampil sebelum lebarnya diukur
+                        if (seq !== viewSeq) return;
+                        const body = this.$refs.viewerBody;
+                        const shown = type === 'application/pdf' ? await renderPdfInto(parts, body) : renderImageInto(parts, type, body);
+                        if (seq !== viewSeq) { shown.destroy(); return; }
+                        viewerCleanup = shown.destroy;
+                        this.docViewer.pages = shown.pages;
+                        this.docViewer.loading = false;
+                    } catch (e) {
+                        if (seq === viewSeq) { this.docViewer.loading = false; this.docViewer.error = e.message || 'Dokumen gagal ditampilkan.'; }
+                    } finally { if (this.fileBusy === f.id) this.fileBusy = null; }
+                },
+                closeViewer() {
+                    viewSeq++;
+                    if (viewerCleanup) { try { viewerCleanup(); } catch (e) {} viewerCleanup = null; }
+                    if (this.docViewer.open) this.docViewer.open = false;
+                },
+                viewerKeys(ev) {   // Ctrl+S dan Ctrl+P dimatikan selama penampil terbuka
+                    if (this.docViewer.open && (ev.ctrlKey || ev.metaKey) && ['s', 'p'].includes(String(ev.key).toLowerCase())) ev.preventDefault();
                 },
                 dropFiles(list) {
                     if (!CLOUD_ON) return;
@@ -1526,6 +1636,7 @@
                     this.entry = null;
                     this.showUploadModal = this.showReviewModal = this.showInfoModal = this.showEditModal = this.showApprovalModal = this.showFindingModal = this.showFindingReview = this.showEvidence = this.showDataModal = false;
                     this.closeDetail();
+                    this.closeViewer();
                     try { sessionStorage.removeItem('ebl_user'); } catch (e) {}
                     if (CLOUD_ON) fbApi.signOut();
                 },
